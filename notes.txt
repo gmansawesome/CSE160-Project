@@ -1,0 +1,8 @@
+Use Timers for internal clock
+Sequence numbers for unique identification of packets in Makpak
+Call Sender - Send
+Node.nc is the entrypoint for TinyOS
+For Mid Review - setup modules for Flooding and Neighbor discovery and link to Node.nc
+Create protocols for flooding and neighbor discovery packets
+ - Just ask chatGPT about how to do things!
+Mount your module in Node.nc and NodeC.nc to wire them
