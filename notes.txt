@@ -6,3 +6,21 @@ For Mid Review - setup modules for Flooding and Neighbor discovery and link to N
 Create protocols for flooding and neighbor discovery packets
  - Just ask chatGPT about how to do things!
 Mount your module in Node.nc and NodeC.nc to wire them
+
+Show all docker containers:
+    docker ps -a 
+
+Remove docker container:
+    docker rm <container_name>
+
+Show all docker images:
+    docker images
+
+Run docker image:
+    docker run -ti <image_name>
+
+Run docker image and mount local folder:
+    docker run -v <local_folder_path>:<destination_in_TinyOS> -ti <image_name>
+
+Run simulation:
+    make micaz sim
