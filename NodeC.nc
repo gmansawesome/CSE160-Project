@@ -33,4 +33,7 @@ implementation {
 
     components FloodingC;
     Node.Flooding -> FloodingC;
+
+    components NeighborC;
+    Node.Neighbor -> NeighborC;
 }
