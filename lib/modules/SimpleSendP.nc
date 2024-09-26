@@ -24,6 +24,8 @@ generic module SimpleSendP(){
    uses interface AMSend;
 
    uses interface Random;
+
+   uses interface Flooding;
 }
 
 implementation{
@@ -42,6 +44,11 @@ implementation{
           // A random element of delay is included to prevent congestion.
          call sendTimer.startOneShot( (call Random.rand16() %300));
       }
+   }
+
+   // Send wrapper with flooding integration
+   command error_t SimpleSend.flood(pack msg) {
+       return call Flooding.flood(&msg, AM_BROADCAST_ADDR); // Trigger flood
    }
 
    // This is a wrapper around the am sender, that adds queuing and delayed
