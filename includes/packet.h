@@ -40,7 +40,6 @@ void logPack(pack *input)
 
 enum {
     AM_PACK = 6,              // For general packet transmission
-    AM_NEIGHBOR_BEACON = 7,   // Unique AM ID for neighbor beacon messages
 };
 
 

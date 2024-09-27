@@ -4,11 +4,9 @@
 
 module NeighborP {
     provides interface Neighbor;
-    uses interface AMSend;
-    uses interface Packet;
+    uses interface SimpleSend;  // Use SimpleSend for sending beacons
     uses interface Timer<TMilli> as beaconTimer;  // Timer to send beacons
-    uses interface AMPacket;  // For receiving packets directly
-    uses interface Receive;  // Declare the Receive interface for receiving messages
+    uses interface Random;  // Use the Random interface for random number generation
 }
 
 implementation {
@@ -29,34 +27,23 @@ implementation {
 
     // Timer event for sending periodic beacons every 30 seconds
     event void beaconTimer.fired() {
-        // Declare the message and beacon structures
-        message_t beaconMsg;  // Declare the message structure
-        NeighborBeacon beacon;  // Declare the NeighborBeacon structure
-        NeighborBeacon* msg;
+        pack beaconMsg;  // Declare the packet structure
         error_t result;
+
         // Set up the beacon with the current node ID and timestamp
-        beacon.nodeID = TOS_NODE_ID;
-        beacon.timestamp = call beaconTimer.getNow();
+        beaconMsg.src = TOS_NODE_ID;
+        beaconMsg.seq = call Random.rand16();  // Generate a random sequence number for the beacon
+        beaconMsg.TTL = MAX_TTL;  // Use maximum TTL
+        beaconMsg.protocol = 0;  // You can define a custom protocol value for neighbor discovery beacons
 
-        // Retrieve the payload from the message packet
-        msg = (NeighborBeacon*)(call Packet.getPayload(&beaconMsg, sizeof(NeighborBeacon)));
-        
-        // Check if the payload was retrieved successfully
-        if (msg != NULL) {
-            // Copy the beacon structure into the payload
-            *msg = beacon;
+        dbg(NEIGHBOR_CHANNEL, "Node %d: Sending neighbor discovery beacon\n", TOS_NODE_ID);
 
-            dbg(NEIGHBOR_CHANNEL, "Node %d: Sending neighbor discovery beacon\n", TOS_NODE_ID);
+        // Use SimpleSend to send the beacon message
+        result = call SimpleSend.send(beaconMsg, AM_BROADCAST_ADDR);  // Send to the broadcast address
 
-            // Declare the result variable for sending the message
-            result = call AMSend.send(AM_BROADCAST_ADDR, &beaconMsg, sizeof(NeighborBeacon));
-            
-            // Check the result of the send operation
-            if (result != SUCCESS) {
-                dbg(NEIGHBOR_CHANNEL, "Node %d: Failed to send beacon message\n", TOS_NODE_ID);
-            }
-        } else {
-            dbg(NEIGHBOR_CHANNEL, "Node %d: Failed to get payload\n", TOS_NODE_ID);
+        // Check the result of the send operation
+        if (result != SUCCESS) {
+            dbg(NEIGHBOR_CHANNEL, "Node %d: Failed to send beacon message\n", TOS_NODE_ID);
         }
     }
 
@@ -101,32 +88,6 @@ implementation {
                 neighborCount--;
                 i--;  // Adjust index since we just shifted neighbors
             }
-        }
-    }
-
-    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-        // Check if the received message is a NeighborBeacon
-        if (len == sizeof(NeighborBeacon)) {
-            NeighborBeacon* beacon = (NeighborBeacon*) payload;
-
-            // Log the received beacon message
-            dbg(NEIGHBOR_CHANNEL, "Node %d: Received beacon from Node %d\n", TOS_NODE_ID, beacon->nodeID);
-
-            // Add or update the neighbor in the neighbor table
-            addOrUpdateNeighbor(beacon->nodeID);
-        }
-
-        // Return the message to be reused
-        return msg;
-    }
-
-
-    // Event for sending done
-    event void AMSend.sendDone(message_t* msg, error_t result) {
-        if (result == SUCCESS) {
-            dbg(NEIGHBOR_CHANNEL, "Node %d: Beacon sent successfully\n", TOS_NODE_ID);
-        } else {
-            dbg(NEIGHBOR_CHANNEL, "Node %d: Failed to send beacon\n", TOS_NODE_ID);
         }
     }
 

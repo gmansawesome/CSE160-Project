@@ -7,13 +7,12 @@ configuration NeighborC {
 implementation {
     components NeighborP;
     components new TimerMilliC() as BeaconTimer;
-    components new AMSenderC(AM_NEIGHBOR_BEACON);  // For sending beacons
-    components new AMReceiverC(AM_NEIGHBOR_BEACON) as BeaconReceiver;  // For receiving beacons
+    components new SimpleSendC(AM_PACK);  // Using SimpleSend for sending beacons
+    components RandomC;  // Add RandomC to provide random number generation
 
     Neighbor = NeighborP.Neighbor;
 
     NeighborP.beaconTimer -> BeaconTimer;
-    NeighborP.AMSend -> AMSenderC;
-    NeighborP.Receive -> BeaconReceiver.Receive;  // Wire the Receive interface here
-    NeighborP.Packet -> AMSenderC;
+    NeighborP.SimpleSend -> SimpleSendC;
+    NeighborP.Random -> RandomC;
 }
