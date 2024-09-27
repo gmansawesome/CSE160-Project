@@ -43,11 +43,10 @@ enum
 	AM_PACK = 6
 };
 
-typedef nx_struct NeighborBeacon
-{
-	nx_uint16_t nodeID;	   // The node that sends the beacon
-	nx_uint32_t timestamp; // Optional timestamp (can be removed if unnecessary)
-}
-NeighborBeacon;
+// This structure defines the contents of a neighbor beacon
+typedef nx_struct NeighborBeacon {
+    nx_uint16_t nodeID;       // ID of the node sending the beacon
+    nx_uint32_t timestamp;    // Timestamp when the beacon was sent (optional)
+} NeighborBeacon;
 
 #endif

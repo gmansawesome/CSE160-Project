@@ -10,8 +10,7 @@
 #include <Timer.h>
 #include "includes/CommandMsg.h"
 #include "includes/packet.h"
-
-configuration NodeC{
+configuration NodeC {
 }
 implementation {
     components MainC;
@@ -20,7 +19,7 @@ implementation {
 
     Node -> MainC.Boot;
 
-    Node.Receive -> GeneralReceive;
+    Node.Receive -> GeneralReceive;  // Keep this if GeneralReceive uses Receive from another component, like AMReceiverC
 
     components ActiveMessageC;
     Node.AMControl -> ActiveMessageC;
