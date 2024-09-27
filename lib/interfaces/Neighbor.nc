@@ -1,5 +1,8 @@
 #include "../../includes/packet.h"
 
-interface Neighbor{
-   command void pass();
+interface Neighbor {
+    command void start();
+    command uint8_t getNeighborCount();
+    command uint16_t getNeighbor(uint8_t neighborIndex);  // Rename index to neighborIndex
+    command void pass();
 }

@@ -1,164 +1,148 @@
-/**
- * ANDES Lab - University of California, Merced
- *
- * @author UCM ANDES Lab
- * @date   2013/09/03
- *
- */
 #include "../../includes/packet.h"
 #include "../../includes/sendInfo.h"
 #include "../../includes/channels.h"
 
-generic module SimpleSendP(){
-    // provides shows the interface we are implementing. See lib/interface/SimpleSend.nc
-    // to see what funcitons we need to implement.
-   provides interface SimpleSend;
+generic module SimpleSendP() {
+    provides interface SimpleSend;
 
-   uses interface Queue<sendInfo*>;
-   uses interface Pool<sendInfo>;
+    uses interface Queue<sendInfo*>;
+    uses interface Pool<sendInfo>;
 
-   uses interface Timer<TMilli> as sendTimer;
+    uses interface Timer<TMilli> as sendTimer;
 
-   uses interface Packet;
-   uses interface AMPacket;
-   uses interface AMSend;
+    uses interface Packet;
+    uses interface AMPacket;
+    uses interface AMSend;
 
-   uses interface Random;
+    uses interface Random;
 
-   uses interface Flooding;
+    uses interface Flooding;
 }
 
-implementation{
-   uint16_t sequenceNum = 0;
-   bool busy = FALSE;
-   message_t pkt;
+implementation {
+    uint16_t sequenceNum = 0;
+    bool busy = FALSE;
+    message_t pkt;
 
-   error_t send(uint16_t src, uint16_t dest, pack *message);
+    error_t send(uint16_t src, uint16_t dest, pack *message);
 
-   // Use this to intiate a send task. We call this method so we can add
-   // a delay between sends. If we don't add a delay there may be collisions.
-   void postSendTask(){
-      // If a task already exist, we don't want to overwrite the clock, so
-      // we can ignore it.
-      if(call sendTimer.isRunning() == FALSE){
-          // A random element of delay is included to prevent congestion.
-         call sendTimer.startOneShot( (call Random.rand16() %300));
-      }
-   }
+    // Use this to initiate a send task. We call this method so we can add
+    // a delay between sends. If we don't add a delay there may be collisions.
+    void postSendTask() {
+        if (call sendTimer.isRunning() == FALSE) {
+            dbg(GENERAL_CHANNEL, "Node %d: Starting send task with random delay\n", TOS_NODE_ID);
+            call sendTimer.startOneShot((call Random.rand16() % 300));
+        }
+    }
 
-   // Send wrapper with flooding integration
-   command error_t SimpleSend.flood(pack msg) {
-       return call Flooding.flood(&msg, AM_BROADCAST_ADDR); // Trigger flood
-   }
+    // Send wrapper with flooding integration
+    command error_t SimpleSend.flood(pack msg) {
+        dbg(FLOODING_CHANNEL, "Node %d: Flooding message with seq %d\n", TOS_NODE_ID, msg.seq);
+        return call Flooding.flood(&msg, AM_BROADCAST_ADDR);  // Trigger flood
+    }
 
-   // This is a wrapper around the am sender, that adds queuing and delayed
-   // sending
-   command error_t SimpleSend.send(pack msg, uint16_t dest) {
-       // First we check to see if we have room in our queue. Since TinyOS is
-       // designed for embedded systems, there is no dynamic memory. This forces
-       // us to allocate space in a pool where pointers can be retrieved. See
-       // SimpleSendC to see where we allocate space. Be sure to put the values
-       // back into the queue once you are done.
-      if(!call Pool.empty()){
-         sendInfo *input;
+    // This is a wrapper around the am sender, that adds queuing and delayed sending
+    command error_t SimpleSend.send(pack msg, uint16_t dest) {
+        dbg(GENERAL_CHANNEL, "Node %d: Attempting to send message with seq %d to %d\n", TOS_NODE_ID, msg.seq, dest);
 
-         input = call Pool.get();
-         input->packet = msg;
-         input->dest = dest;
+        if (!call Pool.empty()) {
+            sendInfo *input;
 
-         // Now that we have a value from the pool we can put it into our queue.
-         // This is a FIFO queue.
-         call Queue.enqueue(input);
+            input = call Pool.get();
+            input->packet = msg;
+            input->dest = dest;
 
-         // Start a send task which will be delayed.
-         postSendTask();
+            dbg(GENERAL_CHANNEL, "Node %d: Enqueuing message with seq %d for destination %d\n", TOS_NODE_ID, msg.seq, dest);
 
-         return SUCCESS;
-      }
-      return FAIL;
-   }
+            call Queue.enqueue(input);
 
-   task void sendBufferTask(){
-       // If we have a values in our queue and the radio is not busy, then
-       // attempt to send a packet.
-      if(!call Queue.empty() && !busy){
-         sendInfo *info;
-         // We are peeking since, there is a possibility that the value will not
-         // be successfuly sent and we would like to continue to attempt to send
-         // it until we are successful. There is no limit on how many attempts
-         // can be made.
-         info = call Queue.head();
+            // Start a send task which will be delayed.
+            postSendTask();
 
-         // Attempt to send it.
-         if(SUCCESS == send(info->src,info->dest, &(info->packet))){
-            //Release resources used if the attempt was successful
-            call Queue.dequeue();
-            call Pool.put(info);
-         }
-
-
-      }
-
-      // While the queue is not empty, we should be re running this task.
-      if(!call Queue.empty()){
-         postSendTask();
-      }
-   }
-
-   // Once the timer fires, we post the sendBufferTask(). This will allow
-   // the OS's scheduler to attempt to send a packet at the next empty slot.
-   event void sendTimer.fired(){
-      post sendBufferTask();
-   }
-
-   /*
-    * Send a packet
-    *
-    *@param
-    *	src - source address
-    *	dest - destination address
-    *	msg - payload to be sent
-    *
-    *@return
-    *	error_t - Returns SUCCESS, EBUSY when the system is too busy using the radio, or FAIL.
-    */
-   error_t send(uint16_t src, uint16_t dest, pack *message){
-      if(!busy){
-          // We are putting data into the payload of the pkt struct. getPayload
-          // aquires the payload pointer from &pkt and we type cast it to our own
-          // packet type.
-         pack* msg = (pack *)(call Packet.getPayload(&pkt, sizeof(pack) ));
-
-         // This coppies the data we have in our message to this new packet type.
-         *msg = *message;
-
-         // Attempt to send the packet.
-         if(call AMSend.send(dest, &pkt, sizeof(pack)) ==SUCCESS){
-            // See AMSend.sendDone(msg, error) to see what happens after.
-            busy = TRUE;
             return SUCCESS;
-         }else{
-             // This shouldn't really happen.
-            dbg(GENERAL_CHANNEL,"The radio is busy, or something\n");
+        } else {
+            dbg(GENERAL_CHANNEL, "Node %d: Pool is empty, unable to send message with seq %d\n", TOS_NODE_ID, msg.seq);
             return FAIL;
-         }
-      }else{
-         dbg(GENERAL_CHANNEL, "The radio is busy");
-         return EBUSY;
-      }
+        }
+    }
 
-      // This definitely shouldn't happen.
-      dbg(GENERAL_CHANNEL, "FAILED!?");
-      return FAIL;
-   }
+    task void sendBufferTask() {
+        dbg(GENERAL_CHANNEL, "Node %d: Running send buffer task\n", TOS_NODE_ID);
 
-   // This event occurs once the message has finished sending. We can attempt
-   // to send again at that point.
-   event void AMSend.sendDone(message_t* msg, error_t error){
-      //Clear Flag, we can send again.
-      if(&pkt == msg){
-         busy = FALSE;
-         postSendTask();
-      }
-   }
+        if (!call Queue.empty() && !busy) {
+            sendInfo *info;
+            info = call Queue.head();
+
+            dbg(GENERAL_CHANNEL, "Node %d: Attempting to send queued message with seq %d to %d\n", TOS_NODE_ID, info->packet.seq, info->dest);
+
+            if (SUCCESS == send(info->src, info->dest, &(info->packet))) {
+                dbg(GENERAL_CHANNEL, "Node %d: Message with seq %d sent successfully\n", TOS_NODE_ID, info->packet.seq);
+
+                call Queue.dequeue();
+                call Pool.put(info);
+            } else {
+                dbg(GENERAL_CHANNEL, "Node %d: Failed to send message with seq %d, will retry\n", TOS_NODE_ID, info->packet.seq);
+            }
+        }
+
+        // While the queue is not empty, keep rerunning this task.
+        if (!call Queue.empty()) {
+            postSendTask();
+        }
+    }
+
+    // Once the timer fires, we post the sendBufferTask(). This allows
+    // the OS's scheduler to attempt to send a packet at the next empty slot.
+    event void sendTimer.fired() {
+        dbg(GENERAL_CHANNEL, "Node %d: Timer fired, triggering sendBufferTask\n", TOS_NODE_ID);
+        post sendBufferTask();
+    }
+
+    /*
+     * Send a packet
+     *
+     * @param
+     *   src - source address
+     *   dest - destination address
+     *   msg - payload to be sent
+     *
+     * @return
+     *   error_t - Returns SUCCESS, EBUSY when the system is too busy using the radio, or FAIL.
+     */
+    error_t send(uint16_t src, uint16_t dest, pack *message) {
+        if (!busy) {
+            pack* msg = (pack *)(call Packet.getPayload(&pkt, sizeof(pack)));
+
+            *msg = *message;
+
+            dbg(GENERAL_CHANNEL, "Node %d: Sending packet with seq %d to %d\n", TOS_NODE_ID, message->seq, dest);
+
+            if (call AMSend.send(dest, &pkt, sizeof(pack)) == SUCCESS) {
+                busy = TRUE;
+                return SUCCESS;
+            } else {
+                dbg(GENERAL_CHANNEL, "Node %d: AMSend failed, radio busy or other error\n", TOS_NODE_ID);
+                return FAIL;
+            }
+        } else {
+            dbg(GENERAL_CHANNEL, "Node %d: Cannot send, radio busy\n", TOS_NODE_ID);
+            return EBUSY;
+        }
+    }
+
+    // This event occurs once the message has finished sending. We can attempt
+    // to send again at that point.
+    event void AMSend.sendDone(message_t* msg, error_t error) {
+        if (&pkt == msg) {
+            busy = FALSE;
+
+            if (error == SUCCESS) {
+                dbg(GENERAL_CHANNEL, "Node %d: Message send completed successfully\n", TOS_NODE_ID);
+            } else {
+                dbg(GENERAL_CHANNEL, "Node %d: Error occurred while sending message: %d\n", TOS_NODE_ID, error);
+            }
+
+            postSendTask();  // Try to send next message in the queue
+        }
+    }
 }

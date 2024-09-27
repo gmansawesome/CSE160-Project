@@ -37,6 +37,10 @@ implementation{
       call AMControl.start();
 
       dbg(GENERAL_CHANNEL, "Booted\n");
+
+      dbg(GENERAL_CHANNEL, "Starting Neighbor Discovery\n");
+      call Neighbor.start();  // Start neighbor discovery at boot time
+
    }
 
    event void AMControl.startDone(error_t err){
