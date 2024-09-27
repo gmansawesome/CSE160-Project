@@ -8,6 +8,7 @@ module NeighborP {
     uses interface Packet;
     uses interface Timer<TMilli> as beaconTimer;  // Timer to send beacons
     uses interface AMPacket;  // For receiving packets directly
+    uses interface Receive;  // Declare the Receive interface for receiving messages
 }
 
 implementation {
@@ -103,11 +104,9 @@ implementation {
         }
     }
 
-    // Directly handle receiving messages using Active Message (AMPacket)
-    event message_t* AMSend.receive(message_t* msg, void* payload, uint8_t len) {
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         // Check if the received message is a NeighborBeacon
         if (len == sizeof(NeighborBeacon)) {
-            // Cast the payload to a NeighborBeacon structure
             NeighborBeacon* beacon = (NeighborBeacon*) payload;
 
             // Log the received beacon message
@@ -117,9 +116,10 @@ implementation {
             addOrUpdateNeighbor(beacon->nodeID);
         }
 
-        // Return the received message to be processed further if necessary
+        // Return the message to be reused
         return msg;
     }
+
 
     // Event for sending done
     event void AMSend.sendDone(message_t* msg, error_t result) {

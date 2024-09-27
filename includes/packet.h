@@ -38,10 +38,11 @@ void logPack(pack *input)
 		input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
 }
 
-enum
-{
-	AM_PACK = 6
+enum {
+    AM_PACK = 6,              // For general packet transmission
+    AM_NEIGHBOR_BEACON = 7,   // Unique AM ID for neighbor beacon messages
 };
+
 
 // This structure defines the contents of a neighbor beacon
 typedef nx_struct NeighborBeacon {
