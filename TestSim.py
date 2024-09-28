@@ -12,7 +12,8 @@ class TestSim:
     # COMMAND TYPES
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
-    CMD_ROUTE_DUMP=3
+    CMD_ROUTE_DUMP = 3
+    CMD_FLOOD = 7
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -118,13 +119,16 @@ class TestSim:
 
     def ping(self, source, dest, msg):
         self.sendCMD(self.CMD_PING, source, "{0}{1}".format(chr(dest),msg));
-
+    
+    def flood(self, source, dest, msg):
+        self.sendCMD(self.CMD_FLOOD, source, "{0}{1}".format(chr(dest),msg));
+    
     def neighborDMP(self, destination):
         self.sendCMD(self.CMD_NEIGHBOR_DUMP, destination, "neighbor command");
 
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
-
+    
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
@@ -135,14 +139,20 @@ def main():
     s.loadTopo("long_line.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
+
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
+    s.addChannel(s.FLOODING_CHANNEL);
 
     s.runTime(20);
-    s.ping(1, 2, "Hello, World");
-    s.runTime(10);
-    s.ping(1, 3, "Hi!");
+    s.flood(1, 2, "fuck");
     s.runTime(20);
+
+    # s.runTime(20);
+    # s.ping(1, 2, "Hello, World");
+    # s.runTime(10);
+    # s.ping(1, 3, "Hi!");
+    # s.runTime(20);
 
 if __name__ == '__main__':
     main()

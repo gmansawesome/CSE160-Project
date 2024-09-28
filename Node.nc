@@ -67,6 +67,11 @@ implementation{
       call Sender.send(sendPackage, destination);
    }
 
+   event void CommandHandler.flood(uint16_t destination, uint8_t *payload){
+      dbg(GENERAL_CHANNEL, "FLOOD EVENT \n");
+      call Flooding.flood(payload, destination);
+   }
+
    event void CommandHandler.printNeighbors(){}
 
    event void CommandHandler.printRouteTable(){}

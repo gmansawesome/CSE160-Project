@@ -12,6 +12,9 @@ implementation{
    components RandomC as Random;
    components new AMSenderC(channel);
 
+   components FloodingC;
+   SimpleSendP.Flooding -> FloodingC.Flooding;
+
    //Timers
    SimpleSendP.sendTimer -> sendTimer;
    SimpleSendP.Random -> Random;

@@ -40,10 +40,10 @@ implementation{
             // Change it to our type.
             msg = (CommandMsg*) payload;
 
-            dbg(COMMAND_CHANNEL, "A Command has been Issued.\n");
+            dbg(COMMAND_CHANNEL, "AAAAA Command has been Issued.\n");
             buff = (uint8_t*) msg->payload;
             commandID = msg->id;
-
+            
             //Find out which command was called and call related command
             switch(commandID){
             // A ping will have the destination of the packet as the first
@@ -76,6 +76,12 @@ implementation{
             case CMD_TEST_SERVER:
                 dbg(COMMAND_CHANNEL, "Command Type: Client\n");
                 signal CommandHandler.setTestServer();
+                break;
+
+            // added event signal function for CMD_FLOOD
+            case CMD_FLOOD:
+                dbg(COMMAND_CHANNEL, "Command Type: Flooding\n");
+                signal CommandHandler.flood(buff[0], &buff[1]);
                 break;
 
             default:
