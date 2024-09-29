@@ -70,8 +70,7 @@ implementation{
 
    event void CommandHandler.flood(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "FLOOD EVENT \n");
-      // makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      // call Flooding.flood(sendPackage, destination);
+      call Flooding.flood(destination, payload);
    }
 
    event void CommandHandler.printNeighbors(){}
