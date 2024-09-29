@@ -1,5 +1,4 @@
 #include "../../includes/packet.h"
-#include "../../includes/sendInfo.h"
 #include "../../includes/channels.h"
 
 module FloodingP{
@@ -18,7 +17,7 @@ implementation {
         pack message;
         error_t result;
 
-        dbg(FLOODING_CHANNEL, "flood running...\n");
+        dbg(FLOODING_CHANNEL, "flood function running...\n");
 
         // Prepare the flood packet
         message.dest = destination;  // Target destination
@@ -32,15 +31,15 @@ implementation {
         result = call SimpleSend.send(message, AM_BROADCAST_ADDR);
 
         if (result == SUCCESS) {
-            dbg(FLOODING_CHANNEL, "Flooding message sent successfully to destination %d\n", destination);
+            dbg(FLOODING_CHANNEL, "Flooding message sent successfully from %d\n to destination %d\n", TOS_NODE_ID, destination);
         } else {
-            dbg(FLOODING_CHANNEL, "Failed to send flooding message to destination %d\n", destination);
+            dbg(FLOODING_CHANNEL, "Failed to send flooding message from %d\n to destination %d\n", TOS_NODE_ID, destination);
         }
 
         return result;
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-    
+        return msg;
     }
 }
