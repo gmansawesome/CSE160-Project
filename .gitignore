@@ -5,4 +5,4 @@ build/*
 *.xml
 TOSSIM.py
 _TOSSIMmodule.so
-.vscode/.filedump
+.vscode/
