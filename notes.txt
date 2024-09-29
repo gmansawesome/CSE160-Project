@@ -21,6 +21,7 @@ Run docker image:
 
 Run docker image and mount local folder:
     docker run -v <local_folder_path>:<destination_in_TinyOS> -ti <image_name>
+    docker run -v C:\Users\micha\Documents\CSE160_Projects\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
 
 Run simulation:
     make micaz sim
