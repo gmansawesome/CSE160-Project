@@ -140,12 +140,12 @@ def main():
     s.loadNoise("no_noise.txt");
     s.bootAll();
 
-    #s.addChannel(s.COMMAND_CHANNEL);
-    #s.addChannel(s.GENERAL_CHANNEL);
+    # s.addChannel(s.COMMAND_CHANNEL);
+    # s.addChannel(s.GENERAL_CHANNEL);
     s.addChannel(s.FLOODING_CHANNEL);
 
     s.runTime(20);
-    s.flood(1, 2, "Flood Message");
+    s.flood(1, 12, "Hello...");
     s.runTime(10);
 
     # s.runTime(20);

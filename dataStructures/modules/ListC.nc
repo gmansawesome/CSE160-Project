@@ -91,4 +91,23 @@ implementation{
 	command t List.get(uint16_t position){
 		return container[position];
 	}
+
+	command void List.insert(uint16_t position, t input) {
+		int32_t i;
+
+		dbg(FLOODING_CHANNEL, "Inserting...\n");
+		//dbg(FLOODING_CHANNEL, "postition: %d, size: %d, max size: %d\n", position, size, MAX_SIZE);
+		// Check if the position is within bounds and if there's room in the list
+		if (position <= size && size <= MAX_SIZE) {
+			//dbg(FLOODING_CHANNEL, "TRIGGER!\n");
+			// Shift elements to the right to make room for the new element
+			for (i = size; i > position; i--) {
+				container[i] = container[i-1];
+			}
+
+			// Insert the input at the specified position
+			container[position] = input;
+			size++;  // Increase the size of the list
+		}
+	}
 }

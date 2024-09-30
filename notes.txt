@@ -25,3 +25,8 @@ Run docker image and mount local folder:
 
 Run simulation:
     make micaz sim
+
+TODO:
+1. --Wire Line to Flooding and set up table in FloodingP for latest seq# from node#--
+2. --Finish flooding - Implement duplicate packet detection for Flooding--
+3. Implement Neighbor Discovery

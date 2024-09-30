@@ -14,7 +14,7 @@ interface List<t>{
     *
     * @param input - data to be inserted
     */
-   command void pushback(t input);
+	command void pushback(t input);
 	command void pushfront(t input);
 	command t popback();
 	command t popfront();
@@ -23,4 +23,5 @@ interface List<t>{
 	command bool isEmpty();
 	command uint16_t size();
 	command t get(uint16_t position);
+	command void insert(uint16_t position, t input);
 }
