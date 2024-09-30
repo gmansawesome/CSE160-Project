@@ -3,5 +3,5 @@
 interface Flooding{
    command void pass();
 
-   command error_t flood(uint16_t destination, uint8_t *payload, uint8_t timeToLive); 
+   command error_t flood(pack message); 
 }

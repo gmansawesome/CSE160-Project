@@ -9,29 +9,20 @@ module FloodingP{
 }
 
 implementation {
-    uint16_t lastSeqNum = 0;
-
     command void Flooding.pass() {}
 
-    command error_t Flooding.flood(uint16_t destination, uint8_t *payload, uint8_t timeToLive) {
-        pack message;
+    command error_t Flooding.flood(pack msg) {
         error_t result;
 
-        // Prepare the flood packet
-        message.dest = destination;  // Target destination
-        message.src = TOS_NODE_ID;   // Source node ID, assuming TOS_NODE_ID is defined
-        message.seq = ++lastSeqNum;  // Increment sequence number for uniqueness
-        message.TTL = timeToLive;       // Set TTL to maximum value
-        message.protocol = PROTOCOL_PING;  // Define protocol type for flood packets
-        memcpy(message.payload, payload, PACKET_MAX_PAYLOAD_SIZE);
+        logPack(&msg, FLOODING_CHANNEL);
 
         // Send the flood message using SimpleSend
-        result = call SimpleSend.send(message, AM_BROADCAST_ADDR);
+        result = call SimpleSend.send(msg, AM_BROADCAST_ADDR);
 
         if (result == SUCCESS) {
-            dbg(FLOODING_CHANNEL, "Flooding message sent successfully from %d\n", TOS_NODE_ID, destination);
+            dbg(FLOODING_CHANNEL, "Flooding message sent successfully from %d\n", TOS_NODE_ID);
         } else {
-            dbg(FLOODING_CHANNEL, "Failed to send flooding message from %d\n", TOS_NODE_ID, destination);
+            dbg(FLOODING_CHANNEL, "Failed to send flooding message from %d\n", TOS_NODE_ID);
         }
 
         return result;
@@ -41,16 +32,9 @@ implementation {
         // Cast the received payload to a packet structure
         pack* receivedMessage = (pack*)payload;
 
-        // Log the received packet information
-        logPack(receivedMessage);
+        dbg(FLOODING_CHANNEL, "Packet received from %d\n", receivedMessage->src);
 
-        dbg(FLOODING_CHANNEL, "Current seq: %d\n", lastSeqNum);
-
-        if (receivedMessage->seq <= lastSeqNum) {
-            dbg(FLOODING_CHANNEL, "Duplicate packet detected. Dropping packet from source %d with sequence %d\n", 
-                receivedMessage->src, receivedMessage->seq);
-            return msg;
-        }
+        logPack(receivedMessage, FLOODING_CHANNEL);
 
         if (receivedMessage->TTL == 0) {
             dbg(FLOODING_CHANNEL, "TTL reached. Dropping packet from source %d with sequence %d\n", 
@@ -58,9 +42,9 @@ implementation {
             return msg;
         }
 
-        lastSeqNum = receivedMessage->seq;
+        receivedMessage->TTL -= 1; 
 
-        call Flooding.flood(receivedMessage->dest, receivedMessage->payload, receivedMessage->TTL - 1);
+        call Flooding.flood(*receivedMessage);
 
         return msg;
     }
