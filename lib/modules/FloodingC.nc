@@ -1,8 +1,6 @@
 #include "../../includes/am_types.h"
 #include "../../includes/packet.h"
 
-#define MAX_NODES 20
-
 configuration FloodingC{
    provides interface Flooding;
 }

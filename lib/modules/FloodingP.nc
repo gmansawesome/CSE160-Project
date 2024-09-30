@@ -17,14 +17,11 @@ implementation {
     command void Flooding.pass() {}
 
     command void Flooding.instantiateList() {
-        uint16_t listSize;
+        uint8_t listSize;
         uint8_t i;
 
-        listSize = call List.size();
-        instList = call List.isEmpty();
-        
+        listSize = MAX_NODES;
         dbg(FLOODING_CHANNEL, "Instantiating...\n");
-        listSize = MAX_TTL;
         for (i = 0; i < listSize; i++) {
             call List.pushback(INT_MAX);
         }
@@ -39,10 +36,11 @@ implementation {
 
         if (!instList) {
             call Flooding.instantiateList();
+            call List.insert(msg.src, msg.seq);
         }        
 
-        // Insert value into list
-        call List.insert(msg.src-1, msg.seq);
+        // Iterate TTL
+        msg.TTL -= 1; 
 
         // Send the flood message using SimpleSend
         result = call SimpleSend.send(msg, AM_BROADCAST_ADDR);
@@ -63,7 +61,6 @@ implementation {
         pack* receivedMessage = (pack*)payload;
 
         dbg(FLOODING_CHANNEL, "Packet received from %d\n", receivedMessage->src);
-
         logPack(receivedMessage, FLOODING_CHANNEL);
 
         // Check for end of TTL
@@ -78,15 +75,8 @@ implementation {
             call Flooding.instantiateList();
         }        
 
-        // Check if I am the destination!!!
-        // Hello... is it me you're looking for?
-        if (receivedMessage->dest == TOS_NODE_ID) {
-            dbg(FLOODING_CHANNEL, "I received a message from %d. The message states: %s\n",
-                receivedMessage->src, receivedMessage->payload);
-            return msg;
-        }
-
-        latestSequence = call List.get(receivedMessage->src-1);        
+        latestSequence = call List.get(receivedMessage->src);  
+        dbg(FLOODING_CHANNEL, "Latest Sequence: %d, New Sequence: %d\n", latestSequence, receivedMessage->seq);  
         // Check for duplicate sequence numbers
         if (latestSequence <= receivedMessage->seq) {
             dbg(FLOODING_CHANNEL, "Duplicate detected. Dropping packet from source %d with sequence %d\n", 
@@ -94,9 +84,21 @@ implementation {
             return msg;
         }
 
-        // Iterate sequence number and TTL
+        call List.insert(receivedMessage->src, receivedMessage->seq);
+
+        // Check if I am the destination!!!
+        // Hello... is it me you're looking for?
+        if (receivedMessage->dest == TOS_NODE_ID) {
+            dbg(FLOODING_CHANNEL, "I received a message from %d. The message states: %s\n",
+                receivedMessage->src, receivedMessage->payload);
+            return msg;
+        }
+        
+        latestSequence = call List.get(receivedMessage->src);  
+        dbg(FLOODING_CHANNEL, "Latest Sequence: %d, New Sequence: %d\n", latestSequence, receivedMessage->seq);  
+
+        // Iterate sequence number
         receivedMessage->seq += 1;
-        receivedMessage->TTL -= 1; 
 
         // Reflood using flood()
         call Flooding.flood(*receivedMessage);
