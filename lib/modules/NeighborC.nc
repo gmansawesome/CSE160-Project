@@ -5,7 +5,7 @@
 configuration NeighborC{
    provides interface Neighbor;
 }
- 
+
 implementation{
     components NeighborP;
     Neighbor = NeighborP.Neighbor;

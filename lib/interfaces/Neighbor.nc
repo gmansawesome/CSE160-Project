@@ -2,5 +2,5 @@
 
 interface Neighbor{
    command void pass();
-   command error_t Neighbor.discoverNeighbors(pack msg);
+   command error_t discoverNeighbors(pack msg);
 }
