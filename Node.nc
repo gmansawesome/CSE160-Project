@@ -80,7 +80,10 @@ implementation{
       call Neighbor.discoverNeighbors(sendPackage);
    }
 
-   event void CommandHandler.printNeighbors(){}
+   event void CommandHandler.printNeighbors(){
+      dbg(GENERAL_CHANNEL, "NEIGHBOR PRINT EVENT \n");
+      call Neighbor.outputNeighbors();
+   }
 
    event void CommandHandler.printRouteTable(){}
 

@@ -14,9 +14,7 @@ module FloodingP{
 implementation {
     bool instList = FALSE;
 
-    command void Flooding.pass() {}
-
-    command void Flooding.instantiateList() {
+    void instantiateList() {
         uint8_t listSize;
         uint8_t i;
 
@@ -35,11 +33,11 @@ implementation {
         logPack(&msg, FLOODING_CHANNEL);
 
         if (!instList) {
-            call Flooding.instantiateList();
-            call List.insert(msg.src, msg.seq);
+            instantiateList();
+            call List.replace(msg.src, msg.seq);
         }        
 
-        // Iterate TTL
+        // Iterate TTL and set new src
         msg.TTL -= 1; 
 
         // Send the flood message using SimpleSend
@@ -61,6 +59,7 @@ implementation {
         pack* receivedMessage = (pack*)payload;
 
         dbg(FLOODING_CHANNEL, "Packet received from %d\n", receivedMessage->src);
+        
         logPack(receivedMessage, FLOODING_CHANNEL);
 
         // Check for end of TTL
@@ -72,7 +71,7 @@ implementation {
 
         // Instantiate List if not instantiated
         if (!instList) {
-            call Flooding.instantiateList();
+            instantiateList();
         }        
 
         latestSequence = call List.get(receivedMessage->src);  
@@ -84,7 +83,10 @@ implementation {
             return msg;
         }
 
-        call List.insert(receivedMessage->src, receivedMessage->seq);
+        call List.replace(receivedMessage->src, receivedMessage->seq);
+
+        latestSequence = call List.get(receivedMessage->src);  
+        dbg(FLOODING_CHANNEL, "Latest Sequence: %d, New Sequence: %d\n", latestSequence, receivedMessage->seq);  
 
         // Check if I am the destination!!!
         // Hello... is it me you're looking for?
@@ -94,9 +96,6 @@ implementation {
             return msg;
         }
         
-        latestSequence = call List.get(receivedMessage->src);  
-        dbg(FLOODING_CHANNEL, "Latest Sequence: %d, New Sequence: %d\n", latestSequence, receivedMessage->seq);  
-
         // Iterate sequence number
         receivedMessage->seq += 1;
 
