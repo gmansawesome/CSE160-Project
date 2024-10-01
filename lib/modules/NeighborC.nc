@@ -10,10 +10,10 @@ implementation{
     components NeighborP;
     Neighbor = NeighborP.Neighbor;
 
-    components new SimpleSendC(AM_PACK);
+    components new SimpleSendC(AM_NEIGHBOR);
     NeighborP.SimpleSend -> SimpleSendC;
 
-    components new AMReceiverC(AM_PACK);
+    components new AMReceiverC(AM_NEIGHBOR);
     NeighborP.Receive -> AMReceiverC;
 
     components ActiveMessageC;

@@ -2,6 +2,7 @@
 #define NEIGHBOR_TABLE_H
 
 typedef struct {
+    uint8_t lastSeen;
     uint8_t linkQuality;
     bool isActive;
 } NeighborTable;
