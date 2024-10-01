@@ -3,6 +3,7 @@
 #include "../../includes/channels.h"
 #include "../../includes/neighborTable.h"
 
+#define ND_TIME_INTERVAL 40000 //40s
 #define QUALITY_THRESHOLD 40
 
 module NeighborP{
@@ -11,11 +12,34 @@ module NeighborP{
    uses interface Receive;
    uses interface SimpleSend;
    uses interface List<NeighborTable>;
+   uses interface Timer<TMilli>;
+   uses interface Boot;
 }
 
 implementation{
     bool instList = FALSE;
     uint8_t currSeq = 0;
+
+    event void Boot.booted() {
+        // dbg(NEIGHBOR_CHANNEL, "BOOTED\n");
+        call Timer.startPeriodic(ND_TIME_INTERVAL);
+    }
+
+    event void Timer.fired() {
+        pack msg;
+        const char *payloadStr = "Are you my friend?";
+
+        msg.src = TOS_NODE_ID;
+        msg.dest = 0;
+        msg.TTL = 0;
+        msg.seq = 0;
+        msg.protocol = PROTOCOL_NEIGHBOR;
+
+        memcpy(msg.payload, payloadStr, PACKET_MAX_PAYLOAD_SIZE);
+
+        // dbg(NEIGHBOR_CHANNEL, "FIRING\n");
+        call Neighbor.discoverNeighbors(msg);
+    }
 
     command error_t Neighbor.discoverNeighbors(pack msg) {
         error_t result;
@@ -28,7 +52,7 @@ implementation{
         // Instantiate list on first iteration
         if (!instList) {
             listSize = MAX_NODES;
-            dbg(NEIGHBOR_CHANNEL, "Instantiating...\n");
+            dbg(NEIGHBOR_CHANNEL, "Instantiating Table...\n");
             for (i = 0; i < listSize; i++) {
                 NeighborTable deadNeighbor;
 
@@ -47,19 +71,11 @@ implementation{
         //     checkNeighbor.lastSeen, checkNeighbor.linkQuality, checkNeighbor.isActive ? "True" : "False");
 
         currSeq++;
-        if (currSeq == 2) {
-            currSeq++;
-            currSeq++;
-            currSeq++;
-        }
-
-        if (currSeq == 6) {
-            currSeq++;
-            currSeq++;
-            currSeq++;
-            currSeq++;
-            currSeq++;
-        }
+        // if (currSeq == 2) {
+        //     currSeq++;
+        //     currSeq++;
+        //     currSeq++;
+        // }
 
         msg.seq = currSeq;
 
@@ -80,16 +96,22 @@ implementation{
     command void Neighbor.outputNeighbors() {
         NeighborTable tempNeighbor;
         uint8_t i;
+        char buffer[30 + (MAX_NODES * 8)];
+        uint8_t pos = 0;
 
-        dbg(NEIGHBOR_CHANNEL, "My neighbors are:\n");
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "I am [%d]. My neighbors are: ", TOS_NODE_ID);
+        // dbg(GENERAL_CHANNEL, "I am [%d]. My neighbors are:\n", TOS_NODE_ID);
         for (i = 1; i <= MAX_NODES; i++) {
             tempNeighbor = call List.get(i);
-            dbg(NEIGHBOR_CHANNEL, "Neighbor %d check | Last Seen: %d, Average: %d, Active: %s\n",
-                i, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
+            // dbg(GENERAL_CHANNEL, "Neighbor %d check | Last Seen: %d, Average: %d, Active: %s\n",
+            //     i, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
             if (tempNeighbor.isActive) {
-                dbg(NEIGHBOR_CHANNEL, "Node %d\n", i);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "[%d] ", i);
+                // dbg(GENERAL_CHANNEL, "Node %d\n", i);
             }
         }
+        
+        dbg(GENERAL_CHANNEL, "%s\n", buffer);
     }
 
 
@@ -110,7 +132,7 @@ implementation{
 
             tempNeighbor = call List.get(receivedMessage->src);
 
-            dbg(NEIGHBOR_CHANNEL, "Neighbor %d check | Last Seen: %d, Average: %d, Active: %s\n",
+            dbg(NEIGHBOR_CHANNEL, "Neighbor %d Before | Last Seen: %d, Average: %d, Active: %s\n",
                 receivedMessage->src, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
 
             // Calculate expected packets
@@ -136,7 +158,7 @@ implementation{
                 tempNeighbor.isActive = TRUE;
             }
 
-            dbg(NEIGHBOR_CHANNEL, "Neighbor %d check | Last Seen: %d, Average: %d, Active: %s\n",
+            dbg(NEIGHBOR_CHANNEL, "Neighbor %d After | Last Seen: %d, Average: %d, Active: %s\n",
                 receivedMessage->src, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
         
             call List.replace(receivedMessage->src, tempNeighbor);

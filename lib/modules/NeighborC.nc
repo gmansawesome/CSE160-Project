@@ -21,4 +21,10 @@ implementation{
 
     components new ListC(NeighborTable, MAX_NODES);
     NeighborP.List -> ListC;
+
+    components new TimerMilliC();
+    NeighborP.Timer -> TimerMilliC;
+
+    components MainC;
+    NeighborP.Boot -> MainC.Boot;
 }

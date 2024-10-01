@@ -14,7 +14,6 @@ class TestSim:
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP = 3
     CMD_FLOOD = 7
-    CMD_NEIGHBOR_DISCOVER = 8
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -124,9 +123,6 @@ class TestSim:
     def flood(self, source, dest, msg):
         self.sendCMD(self.CMD_FLOOD, source, "{0}{1}".format(chr(dest),msg));
     
-    def neighborDiscover(self, source):
-        self.sendCMD(self.CMD_NEIGHBOR_DISCOVER, source, "Are you my friend?");
-
     def neighborDMP(self, destination):
         self.sendCMD(self.CMD_NEIGHBOR_DUMP, destination, "neighbor command");
 
@@ -145,34 +141,24 @@ def main():
     s.bootAll();
 
     # s.addChannel(s.COMMAND_CHANNEL);
-    # s.addChannel(s.GENERAL_CHANNEL);
+    s.addChannel(s.GENERAL_CHANNEL);
     s.addChannel(s.FLOODING_CHANNEL);
-    s.addChannel(s.NEIGHBOR_CHANNEL);
+    # s.addChannel(s.NEIGHBOR_CHANNEL);
 
     # NEIGHBOR
-    s.runTime(10);
-    s.neighborDiscover(4);
-    s.runTime(10);
-    s.neighborDiscover(4);
-    s.runTime(10);
-    s.neighborDiscover(4);
-    s.runTime(10);
-    s.neighborDiscover(4);
-    s.runTime(10);
-
-    s.runTime(100);
-    s.neighborDMP(4);
-    s.runTime(10);
-
     # s.runTime(10);
-    # for i in range (1, 20):
-    #     s.neighborDiscover(i)
-    #     s.runTime(5);
+    # s.neighborDMP(4);
     # s.runTime(10);
+
+    s.runTime(10);
+    for i in range (1, 20):
+        s.neighborDMP(i)
+        s.runTime(10);
+    s.runTime(10);
 
     # FLOOD
-    s.runTime(100);
-    s.flood(1, 4, "Hello...");
+    s.runTime(10);
+    s.flood(1, 4, "Hello There");
     s.runTime(10);
 
     # PING

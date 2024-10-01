@@ -58,11 +58,6 @@ implementation{
                 signal CommandHandler.flood(buff[0], &buff[1]);
                 break;
 
-            case CMD_NEIGHBOR_DISCOVER:
-                dbg(COMMAND_CHANNEL, "Command Type: Neighbor Discover\n");
-                signal CommandHandler.neighborDiscover(buff);
-                break; 
-
             case CMD_NEIGHBOR_DUMP:
                 dbg(COMMAND_CHANNEL, "Command Type: Neighbor Dump\n");
                 signal CommandHandler.printNeighbors();

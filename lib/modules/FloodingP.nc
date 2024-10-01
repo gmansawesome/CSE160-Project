@@ -19,7 +19,7 @@ implementation {
         uint8_t i;
 
         listSize = MAX_NODES;
-        dbg(FLOODING_CHANNEL, "Instantiating...\n");
+        dbg(FLOODING_CHANNEL, "Instantiating List...\n");
         for (i = 0; i < listSize; i++) {
             call List.pushback(INT_MAX);
         }

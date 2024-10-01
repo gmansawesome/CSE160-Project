@@ -74,12 +74,6 @@ implementation{
       call Flooding.flood(sendPackage);
    }
 
-   event void CommandHandler.neighborDiscover(uint8_t *payload){
-      dbg(GENERAL_CHANNEL, "NEIGHBOR DISCOVER EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, 0, 0, PROTOCOL_NEIGHBOR, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Neighbor.discoverNeighbors(sendPackage);
-   }
-
    event void CommandHandler.printNeighbors(){
       dbg(GENERAL_CHANNEL, "NEIGHBOR PRINT EVENT \n");
       call Neighbor.outputNeighbors();
