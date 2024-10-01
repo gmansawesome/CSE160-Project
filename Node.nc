@@ -54,16 +54,47 @@ implementation{
 
    event void AMControl.stopDone(error_t err){}
 
-   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-      dbg(GENERAL_CHANNEL, "Packet Received\n");
-      if(len==sizeof(pack)){
-         pack* myMsg=(pack*) payload;
-         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-         return msg;
+   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
+      if (len == sizeof(NeighborBeacon)) {
+         NeighborBeacon* beacon = (NeighborBeacon*) payload;
+         dbg(NEIGHBOR_CHANNEL, "Node %d: Received beacon from Node %d\n", TOS_NODE_ID, beacon->nodeID);
+      } else {
+         dbg(GENERAL_CHANNEL, "Received unknown packet length: %d\n", len);
       }
-      dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
-      return msg;
-   }
+    // Check if the received packet is a regular pack
+    if (len == sizeof(pack)) {
+        pack* myMsg = (pack*) payload;
+
+        dbg(GENERAL_CHANNEL, "Packet Received\n");
+        dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+
+        // Check if the packet is a neighbor discovery packet (you can set a special protocol value for neighbor discovery)
+        if (myMsg->protocol == NEIGHBOR_DISCOVERY_PROTOCOL) {
+            dbg(NEIGHBOR_CHANNEL, "Node %d: Neighbor discovery packet received\n", TOS_NODE_ID);
+            
+            // Handle neighbor discovery packet (pass src ID)
+            Neighbor.addOrUpdateNeighbor(myMsg->src);  // Assuming myMsg->src contains the neighbor's node ID
+        }
+
+        return msg;
+    }
+
+    // Check if the received packet is a NeighborBeacon
+    if (len == sizeof(NeighborBeacon)) {
+        NeighborBeacon* beacon = (NeighborBeacon*) payload;
+
+        dbg(NEIGHBOR_CHANNEL, "Node %d: Received beacon from Node %d\n", TOS_NODE_ID, beacon->nodeID);
+
+        // Add or update the neighbor in the neighbor table
+        Neighbor.addOrUpdateNeighbor(beacon->nodeID);
+
+        return msg;
+    }
+
+    // If the packet type is unknown, log the length
+    dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+    return msg;
+}
 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
