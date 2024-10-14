@@ -1,12 +1,3 @@
-Use Timers for internal clock
-Sequence numbers for unique identification of packets in Makpak
-Call Sender - Send
-Node.nc is the entrypoint for TinyOS
-For Mid Review - setup modules for Flooding and Neighbor discovery and link to Node.nc
-Create protocols for flooding and neighbor discovery packets
- - Just ask chatGPT about how to do things!
-Mount your module in Node.nc and NodeC.nc to wire them
-
 Show all docker containers:
     docker ps -a 
 
@@ -21,39 +12,11 @@ Run docker image:
 
 Run docker image and mount local folder:
     docker run -v <local_folder_path>:<destination_in_TinyOS> -ti <image_name>
-    docker run -v C:\Users\micha\Documents\CSE160_Projects\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
-
-Run simulation:
-    make micaz sim
+    docker run -v C:\Users\micha\Documents\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
 
 TODO:
 1. --Wire Line to Flooding and set up table in FloodingP for latest seq# from node#--
 2. --Finish flooding - Implement duplicate packet detection for Flooding--
-3. Figure out list/index problem
-4. Neighbor Discovery
-5. Custom 
-
-Design Doc:
-
-Neighbor Discovery - currently provides discoverNeighbors() and outputNeighbors() services,
-which respectively discover and output the neighbors of the input node. The neighbors are stored inside a
-node table implemented using the List datastructure and neighborTable.h struct for the fields.
-
-For the future the function updateNeighbors(node) will be necesasry since currently the node table update
-functionality is implemented in the Receive.receive() function (a dead node will not be sending packets),
-but for the purposes of testing functionality it's enough (run it sequentially multiple times to simulate).
-
-
-Flooding - currently provides just the flood() service, which implements flooding via. broadcasting, and
-logs the most recent sequence seen from the flood source node in a List datastryctyre to detect and drop duplicates.
-
-Doesn't currently use services from Neighbor Discovery because I implemented flooding first, but I may do so if it's
-necessary for future projects. Currently takes in a source node, destination node, and payload message as arguments.
-The source node is the flood source node, and the destination node is for testing purposes to detect if the flooding
-reaches a specific node. 
-
-
-Both of these modules have been tested with both topographies and varying values. I have yet to implement any custom
-packet structures and just used the provided one for the sake of getting the core functionality of the modules working
-first, but will definitely do so in the future.
-
+3. --Figure out list/index problem--
+4. --Neighbor Discovery--
+5. Custom Packets

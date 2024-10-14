@@ -154,11 +154,9 @@ def main():
     for i in range (1, 20):
         s.neighborDMP(i)
         s.runTime(10);
-    s.runTime(10);
 
     # FLOOD
-    s.runTime(10);
-    s.flood(1, 4, "Hello There");
+    s.flood(1, 4, "Hello World");
     s.runTime(10);
 
     # PING
