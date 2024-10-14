@@ -1,5 +1,4 @@
 #include "../../includes/packet.h"
-#include "../../includes/link_layer.h"
 #include "../../includes/channels.h"
 
 #define INT_MAX 32767
@@ -61,6 +60,7 @@ implementation {
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         uint16_t latestSequence;
+
 
         // Cast the received payload to a packet structure
         pack* receivedMessage = (pack*)payload;

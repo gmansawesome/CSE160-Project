@@ -15,8 +15,4 @@ Run docker image and mount local folder:
     docker run -v C:\Users\micha\Documents\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
 
 TODO:
-1. --Wire Line to Flooding and set up table in FloodingP for latest seq# from node#--
-2. --Finish flooding - Implement duplicate packet detection for Flooding--
-3. --Figure out list/index problem--
-4. --Neighbor Discovery--
-5. Custom Packets
+1. routing!

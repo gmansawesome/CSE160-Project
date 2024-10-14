@@ -20,8 +20,8 @@ enum{
 typedef nx_struct pack{
 	nx_uint16_t dest;
 	nx_uint16_t src;
-	nx_uint16_t seq;		//Sequence Number
-	nx_uint8_t TTL;		//Time to Live
+	nx_uint16_t seq;
+	nx_uint8_t TTL;
 	nx_uint8_t protocol;
 	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
 }pack;
