@@ -3,7 +3,8 @@
 #include "../../includes/channels.h"
 #include "../../includes/neighborTable.h"
 
-#define ND_TIME_INTERVAL 120000 //120ms
+#define ND_TIME_INTERVAL 1000 //1ms
+#define MISSED_PACKETS 10
 #define QUALITY_THRESHOLD 40
 
 module NeighborP{
@@ -20,8 +21,9 @@ implementation{
     bool instList = FALSE;
     uint8_t currSeq = 0;
 
+    static uint16_t activeNeighbors[MAX_NODES];
+
     event void Boot.booted() {
-        // Start running ND
         call Timer.startPeriodic(ND_TIME_INTERVAL);
     }
 
@@ -70,8 +72,8 @@ implementation{
         //     currSeq += 10;
         // }
 
-        // Update neighbors who missed all of the last 10 packets
-        if (currSeq % 10 == 0) {
+        // Update neighbors who missed all of a certain # of ND packets
+        if (currSeq % MISSED_PACKETS == 0) {
             for (i = 1; i <= MAX_NODES; i++) {
                 NeighborTable tempNeighbor;
 
@@ -79,14 +81,14 @@ implementation{
                 // dbg(GENERAL_CHANNEL, "Neighbor %d | Last Seen: %d, Average: %d, Active: %s\n",
                 // i, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
 
-                if (currSeq-10 >= tempNeighbor.lastSeen) {
-                    // dbg(GENERAL_CHANNEL, "Neighbor %d | Last Seen: %d, Average: %d, Active: %s\n",
-                    // i, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
+                if (tempNeighbor.isActive && currSeq-MISSED_PACKETS >= tempNeighbor.lastSeen) {
+                    dbg(GENERAL_CHANNEL, "Neighbor %d Lost | Current: %d, Last seen: %d, Average: %d, Active: %s\n",
+                    i, currSeq, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
                     tempNeighbor.lastSeen = currSeq;
                     tempNeighbor.linkQuality = 0;
                     tempNeighbor.isActive = FALSE;
-                    // dbg(GENERAL_CHANNEL, "Neighbor %d | Last Seen: %d, Average: %d, Active: %s\n",
-                    // i, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
+                    // dbg(GENERAL_CHANNEL, "Neighbor %d Lost | Current: %d, Last seen: %d, Average: %d, Active: %s\n",
+                    // i, currSeq, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
 
                     call List.replace(i, tempNeighbor);
                 }
@@ -113,6 +115,29 @@ implementation{
         }
         
         dbg(GENERAL_CHANNEL, "%s\n", buffer);
+    }
+
+    command uint16_t* Neighbor.requestNeighbors() {
+        NeighborTable tempNeighbor;
+        uint8_t i;
+        uint8_t count = 0;
+
+        // reset array of active neighbors
+        for (i = 0; i < MAX_NODES; i++) {
+            activeNeighbors[i] = 0;
+        }
+
+        // fill array of active neighbors
+        for (i = 1; i <= MAX_NODES; i++) {
+            tempNeighbor = call List.get(i);
+
+            if (tempNeighbor.isActive) {
+                activeNeighbors[count] = i;
+                count++;
+            }
+        }
+        
+        return activeNeighbors;
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {

@@ -25,6 +25,7 @@ module Node{
 
    uses interface Flooding;
    uses interface Neighbor;
+   uses interface Routing;
 }
 
 implementation{

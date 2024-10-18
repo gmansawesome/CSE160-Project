@@ -36,4 +36,7 @@ implementation {
 
     components NeighborC;
     Node.Neighbor -> NeighborC;
+
+    components RoutingC;
+    Node.Routing -> RoutingC;
 }
