@@ -82,7 +82,10 @@ implementation{
 
    event void CommandHandler.printRouteTable(){}
 
-   event void CommandHandler.printLinkState(){}
+   event void CommandHandler.printLinkState(){
+      dbg(GENERAL_CHANNEL, "LINKSTATE PRINT EVENT \n");
+      call Routing.outputAllNeighbors();
+   }
 
    event void CommandHandler.printDistanceVector(){}
 

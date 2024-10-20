@@ -1,5 +1,4 @@
 #include "../../includes/packet.h"
-#include "../../includes/neighborInfo.h"
 
 configuration RoutingC{
    provides interface Routing;
@@ -18,6 +17,6 @@ implementation{
     components NeighborC;
     RoutingP.Neighbor -> NeighborC;
 
-    components new ListC(NeighborInfo, MAX_NODES*MAX_NODES);
-    RoutingP.List -> ListC;
+    components FloodingC;
+    RoutingP.Flooding -> FloodingC;
 }

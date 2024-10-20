@@ -20,4 +20,7 @@ implementation{
 
     components new ListC(uint16_t, MAX_NODES);
     FloodingP.List -> ListC;
+
+    components RoutingC;
+    FloodingP.Routing -> RoutingC;
 }
