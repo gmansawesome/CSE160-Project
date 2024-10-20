@@ -154,23 +154,16 @@ def main():
     # s.runTime(10);
     # s.neighborDMP(4);
     # s.runTime(10);
+    
+    # s.runTime(10);
+    # s.moteOff(8);
 
     s.runTime(10);
     for i in range (1, 20):
         s.neighborDMP(i);
         s.runTime(10);
 
-    s.runTime(10);
     # s.moteOff(8);
-
-    # s.runTime(10);
-    # s.linkstateDMP(4);
-    # s.runTime(10);
-
-    s.runTime(10);
-    for i in range (1, 20):
-        s.linkstateDMP(i);
-        s.runTime(10);
 
     # s.runTime(10);
     # for i in range (1, 20):
@@ -184,9 +177,25 @@ def main():
     #     s.neighborDMP(i);
     #     s.runTime(10);
 
+
+    # ROUTING
+    # s.linkstateDMP(6);
+    # s.runTime(10);
+
+    s.runTime(10);
+    for i in range (1, 20):
+        s.linkstateDMP(i);
+        s.runTime(10);
+
     # FLOOD
+    # s.runTime(10);
     # s.flood(1, 4, "Hello World");
     # s.runTime(10);
+
+    # s.runTime(10);
+    # s.flood(1, 5, "Hello World");
+    # s.runTime(10);
+
 
     # PING
     # s.runTime(20);

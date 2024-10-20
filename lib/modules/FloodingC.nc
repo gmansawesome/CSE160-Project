@@ -1,5 +1,6 @@
 #include "../../includes/am_types.h"
 #include "../../includes/packet.h"
+#include "../../includes/floodingTable.h"
 
 configuration FloodingC{
    provides interface Flooding;
@@ -18,8 +19,14 @@ implementation{
     components ActiveMessageC;
     FloodingP.Packet -> ActiveMessageC;
 
-    components new ListC(uint16_t, MAX_NODES);
+    components new ListC(FloodingTable, MAX_NODES);
     FloodingP.List -> ListC;
+
+    components new TimerMilliC();
+    FloodingP.Timer -> TimerMilliC;
+
+    components MainC;
+    FloodingP.Boot -> MainC.Boot;
 
     components RoutingC;
     FloodingP.Routing -> RoutingC;

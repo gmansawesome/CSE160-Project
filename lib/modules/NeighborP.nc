@@ -18,12 +18,25 @@ module NeighborP{
 }
 
 implementation{
-    bool instList = FALSE;
     uint8_t currSeq = 0;
 
     static uint16_t activeNeighbors[MAX_NODES];
 
     event void Boot.booted() {
+        uint8_t i;
+        
+        // Instantiate neighbor cache on first iteration
+        // dbg(NEIGHBOR_CHANNEL, "Instantiating neighbor cache...\n");
+        for (i = 0; i < MAX_NODES; i++) {
+            NeighborTable emptyNeighbor;
+
+            emptyNeighbor.lastSeen = 0;
+            emptyNeighbor.linkQuality = 0;
+            emptyNeighbor.isActive = FALSE;
+
+            call List.pushback(emptyNeighbor);
+        }
+
         call Timer.startPeriodic(ND_TIME_INTERVAL);
     }
 
@@ -32,22 +45,6 @@ implementation{
         uint8_t i;
         pack msg;
         const char *payloadStr = "Are you my friend?";
-
-        // Instantiate neighbor cache on first iteration
-        if (!instList) {
-            // dbg(NEIGHBOR_CHANNEL, "Instantiating neighbor cache...\n");
-            for (i = 0; i < MAX_NODES; i++) {
-                NeighborTable emptyNeighbor;
-
-                emptyNeighbor.lastSeen = 0;
-                emptyNeighbor.linkQuality = 0;
-                emptyNeighbor.isActive = FALSE;
-
-                call List.pushback(emptyNeighbor);
-            }
-
-            instList = TRUE;
-        }
 
         // Setting up ND Packet
         msg.src = TOS_NODE_ID;
