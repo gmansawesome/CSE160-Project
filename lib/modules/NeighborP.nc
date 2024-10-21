@@ -3,7 +3,7 @@
 #include "../../includes/channels.h"
 #include "../../includes/neighborTable.h"
 
-#define ND_TIME_INTERVAL 1000 //1ms
+#define ND_TIME_INTERVAL 5000 //5ms
 #define MISSED_PACKETS 10
 #define QUALITY_THRESHOLD 40
 
@@ -15,12 +15,13 @@ module NeighborP{
    uses interface List<NeighborTable>;
    uses interface Timer<TMilli>;
    uses interface Boot;
+   uses interface Routing;
 }
 
 implementation{
     uint8_t currSeq = 0;
 
-    static uint16_t activeNeighbors[MAX_NODES];
+    static uint8_t activeNeighbors[MAX_NODES];
 
     event void Boot.booted() {
         uint8_t i;
@@ -88,6 +89,8 @@ implementation{
                     // i, currSeq, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
 
                     call List.replace(i, tempNeighbor);
+
+                    call Routing.floodLSP();
                 }
             }    
         }
@@ -114,7 +117,7 @@ implementation{
         dbg(GENERAL_CHANNEL, "%s\n", buffer);
     }
 
-    command uint16_t* Neighbor.requestNeighbors() {
+    command uint8_t* Neighbor.requestNeighbors() {
         NeighborTable tempNeighbor;
         uint8_t i;
         uint8_t count = 0;
@@ -174,15 +177,16 @@ implementation{
             // Update isActive
             if (tempNeighbor.linkQuality < QUALITY_THRESHOLD) {
                 tempNeighbor.isActive = FALSE;
+                call List.replace(receivedMessage->src, tempNeighbor);
+                call Routing.floodLSP();
             } else {
                 tempNeighbor.isActive = TRUE;
+                call List.replace(receivedMessage->src, tempNeighbor);
             }
 
             dbg(NEIGHBOR_CHANNEL, "Neighbor %d After | Last Seen: %d, Average: %d, Active: %s\n",
                 receivedMessage->src, tempNeighbor.lastSeen, tempNeighbor.linkQuality, tempNeighbor.isActive ? "True" : "False");
         
-            call List.replace(receivedMessage->src, tempNeighbor);
-
             // logPack(receivedMessage, NEIGHBOR_CHANNEL);
         } else {
             dbg(NEIGHBOR_CHANNEL, "Request received from %d\n", receivedMessage->src);

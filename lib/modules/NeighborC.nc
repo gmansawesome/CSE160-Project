@@ -27,4 +27,7 @@ implementation{
 
     components MainC;
     NeighborP.Boot -> MainC.Boot;
+
+    components RoutingC;
+    NeighborP.Routing -> RoutingC;
 }

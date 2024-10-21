@@ -1,6 +1,7 @@
 #include "../../includes/packet.h"
 
 interface Routing {
-    command void addNeighbors(uint16_t src, uint8_t* receivedPayload);
+    command void floodLSP();
+    command void addNeighbors(uint8_t src, uint8_t* receivedPayload);
     command void outputAllNeighbors();
 }

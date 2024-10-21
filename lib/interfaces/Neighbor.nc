@@ -2,5 +2,5 @@
 
 interface Neighbor{
    command void outputNeighbors();
-   command uint16_t* requestNeighbors();
+   command uint8_t* requestNeighbors();
 }

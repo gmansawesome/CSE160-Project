@@ -129,10 +129,10 @@ implementation {
 
         // Check if Routing LSP
         if (receivedMessage->protocol == PROTOCOL_LINKSTATE) {
-            if (receivedMessage->src == 1) {
-                // dbg(ROUTING_CHANNEL, "I received a LSP from [%d] with offset %d\n", receivedMessage->src, receivedMessage->dest);
-                // logPack(receivedMessage, ROUTING_CHANNEL);
-            }
+            // if (TOS_NODE_ID == 4) {
+            //     dbg(ROUTING_CHANNEL, "I received a LSP from [%d] with offset %d\n", receivedMessage->src, receivedMessage->dest);
+            //     logPack(receivedMessage, ROUTING_CHANNEL);
+            // }
 
             call Routing.addNeighbors(receivedMessage->src, receivedMessage->payload);
 

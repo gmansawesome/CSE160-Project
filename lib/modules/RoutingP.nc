@@ -13,9 +13,12 @@ module RoutingP{
 }
 
 implementation {
-    uint16_t* activeNeighborPointer;
+    uint8_t* activeNeighborPointer;
+    uint8_t clearCount = 0;
 
-    static uint16_t allNeighbors[MAX_NODES*MAX_NODES];
+    static uint8_t routingTable[MAX_NODES];
+
+    static uint8_t allNeighbors[MAX_NODES*MAX_NODES];
 
     // clear all array neighbors entries for a specific node
     void clearNeighbors(uint8_t node) {
@@ -27,7 +30,7 @@ implementation {
     }
 
     // update self neighbor entries and flood LSP to all other nodes.
-    void floodLSP() {
+    command void Routing.floodLSP() {
         uint8_t i;
         uint8_t total = 0;
         uint8_t count = 0;
@@ -37,7 +40,7 @@ implementation {
     
         activeNeighborPointer = call Neighbor.requestNeighbors();
 
-        clearNeighbors(TOS_NODE_ID);
+        // clearNeighbors(TOS_NODE_ID);
 
         // update self neighbor entries
         for (i = 0; i < MAX_NODES; i++) {
@@ -52,7 +55,7 @@ implementation {
                 break;
             }
 
-            allNeighbors[(TOS_NODE_ID-1)*MAX_NODES + i] = activeNeighborPointer[i];
+            // allNeighbors[(TOS_NODE_ID-1)*MAX_NODES + i] = activeNeighborPointer[i];
             total++;
         }
 
@@ -70,7 +73,7 @@ implementation {
             tempPayload[0] = offset;
 
             for (i = 1; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
-                tempPayload[i] = allNeighbors[(TOS_NODE_ID-1)*MAX_NODES + count];
+                tempPayload[i] = activeNeighborPointer[count];
                 count++;
 
                 if (count > total) {
@@ -80,6 +83,8 @@ implementation {
                     offset++;
                 }
             }
+
+            call Routing.addNeighbors(TOS_NODE_ID, tempPayload);
             
             memcpy(msg.payload, tempPayload, PACKET_MAX_PAYLOAD_SIZE);
 
@@ -89,6 +94,71 @@ implementation {
 
             // if (TOS_NODE_ID == 1) {
             //     dbg(ROUTING_CHANNEL, "Packet sent from %d with offset %d\n", TOS_NODE_ID, msg.dest);
+            // }
+        }
+    }
+
+    // update neighbor entries for recieved LSP
+    command void Routing.addNeighbors(uint8_t src, uint8_t* receivedPayload) {
+        uint8_t i;
+        uint8_t j;
+        uint8_t offset;
+        bool found;
+
+        offset = receivedPayload[0];
+
+        // need to compare current neighbors to new, to see if anyone dropped
+        for (i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
+            if (allNeighbors[(src-1)*MAX_NODES + offset + i] == 0 || (allNeighbors[(allNeighbors[(src-1)*MAX_NODES + offset + i]-1)*MAX_NODES] == 0 && src != allNeighbors[(src-1)*MAX_NODES + offset + i]-1)) {
+                break;
+            }
+
+            // if (TOS_NODE_ID == 4 && src == 4) {
+            //     dbg(ROUTING_CHANNEL, "Node [%d] at [%d]\n", allNeighbors[(src-1)*MAX_NODES + offset + i], src);
+            // }
+            
+            found = FALSE;
+            for (j = 1; j <= PACKET_MAX_PAYLOAD_SIZE; j++) {
+                if (receivedPayload[j] == 0) {
+                    break;
+                }
+
+                if (allNeighbors[(src-1)*MAX_NODES + offset + i] == receivedPayload[j]) {
+                    found = TRUE;
+                }
+            }
+
+            // if (TOS_NODE_ID == 4 && src == 4) {
+                if (!found) {
+                    // dbg(ROUTING_CHANNEL, "Node [%d] lost at [%d]\n", allNeighbors[(src-1)*MAX_NODES + offset + i], src);
+                    clearNeighbors(allNeighbors[(src-1)*MAX_NODES + offset + i]);
+                }
+                else {
+                    // dbg(ROUTING_CHANNEL, "Node [%d] found at [%d]\n", allNeighbors[(src-1)*MAX_NODES + offset + i], src);
+                }
+            // }
+        }
+
+        if (offset == 0) {
+            // if (src == 8) {
+            //     dbg(ROUTING_CHANNEL, "Clearing Node [%d]\n", src);
+            // }
+            clearNeighbors(src);
+        }
+
+        for (i = 1; i <= PACKET_MAX_PAYLOAD_SIZE-1; i++) {
+            if (receivedPayload[i] == 0) {
+                break;
+            }
+
+            // if (TOS_NODE_ID == 4 && src == 8) {
+            //     dbg(ROUTING_CHANNEL, "Source: %d, Offset: %d, Adding %d at position %d\n", src, offset, receivedPayload[i], (src-1)*MAX_NODES + offset + i - 1);
+            // }
+            
+            allNeighbors[(src-1)*MAX_NODES + offset + i - 1] = receivedPayload[i];
+
+            // if (TOS_NODE_ID == 4 && src == 8) {
+            //     dbg(ROUTING_CHANNEL, "Check %d at position %d\n", allNeighbors[(src-1)*MAX_NODES + offset + i - 1], (src-1)*MAX_NODES + offset + i - 1);
             // }
         }
     }
@@ -105,33 +175,19 @@ implementation {
     }
 
     event void Timer.fired() {
+        uint8_t i; 
+
+        // periodically flood LSP, and clear LSP table
         // dbg(ROUTING_CHANNEL, "FIRED\n");
-        floodLSP();
-    }
+        call Routing.floodLSP();
+        clearCount++;
 
-    // update neighbor entries for recieved LSP
-    command void Routing.addNeighbors(uint16_t src, uint8_t* receivedPayload) {
-        uint8_t i;
-        uint8_t offset;
-
-        // need to compare current neighbors to new, to see if anyone dropped
-
-        offset = receivedPayload[0];
-
-        if (offset == 0) {
-            clearNeighbors(src);
-        }
-
-        for (i = 1; i <= PACKET_MAX_PAYLOAD_SIZE-1; i++) {
-            if (receivedPayload[i] == 0) {
-                break;
-            }
-
-            // if (TOS_NODE_ID == 4 && src == 1) {
-            //     dbg(ROUTING_CHANNEL, "Source: %d, Offset: %d, Adding %d at position %d\n", src, offset, receivedPayload[i], (src-1)*MAX_NODES + offset + i - 1);
+        if (clearCount == 20) {
+            // dbg(ROUTING_CHANNEL, "CLEARING LSP TABLE\n");
+            // for (i = 1; i <= MAX_NODES; i++) {
+            //     clearNeighbors(i);
             // }
-            
-            allNeighbors[(src-1)*MAX_NODES + offset + i - 1] = receivedPayload[i];
+            clearCount = 0;
         }
     }
 
@@ -146,12 +202,15 @@ implementation {
                     break;
                 }
 
-                if (j == 0) {
-                    dbg(ROUTING_CHANNEL, "Current Node: %d\n", i);
-                }
+                // if (i < 10) {
+                    if (j == 0) {
+                        dbg(ROUTING_CHANNEL, "Current Node: %d\n", i);
+                    }
 
-                dbg(ROUTING_CHANNEL, "Node: [%d], Position: %d, Neighbor: [%d]\n", i, (i-1)*MAX_NODES + j, allNeighbors[(i-1)*MAX_NODES + j]);
+                    dbg(ROUTING_CHANNEL, "Node: [%d], Position: %d, Neighbor: [%d]\n", i, (i-1)*MAX_NODES + j, allNeighbors[(i-1)*MAX_NODES + j]);
+                // }
             }
         }
     }
+
 }
