@@ -6,6 +6,8 @@
 module RoutingP{
     provides interface Routing;
     uses interface Packet;
+    uses interface Receive;
+    uses interface SimpleSend;
     uses interface Timer<TMilli>;
     uses interface Boot;
     uses interface Neighbor;
@@ -309,14 +311,33 @@ implementation {
         }
     }
 
-    // return next hop from Routing Table for packet forwarding
-    command uint8_t Routing.forwarding(uint8_t dest) {
+    // packet forwarding
+    command void Routing.forwarding(pack msg) {
         buildRoutingTable();
+        
+        dbg(ROUTING_CHANNEL, "[%d] -> [%d]\n", TOS_NODE_ID, routingTableNextHop[msg.dest-1]);
+        if (routingTableNextHop[msg.dest-1] == 0) {
+            dbg(ROUTING_CHANNEL, "No path from %d to %d found\n", TOS_NODE_ID, msg.dest);
+        }
+        
+        call SimpleSend.send(msg, routingTableNextHop[msg.dest-1]);
+    }
 
-        if (dest > 0 && dest <= MAX_NODES) {
-            return routingTableNextHop[dest-1];
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
+        pack* receivedMessage = (pack*)payload;
+
+        // dbg(ROUTING_CHANNEL, "Packet RECEIVED from ping source %d\n", receivedMessage->src);
+
+        // Check if I am destination
+        if (receivedMessage->dest == TOS_NODE_ID) {
+            dbg(GENERAL_CHANNEL, "I am [%d]. I received a message from %d. The message states: %s\n",
+                TOS_NODE_ID, receivedMessage->src, receivedMessage->payload);
+            
+            return msg;
         }
 
-        return dest;
+        call Routing.forwarding(*receivedMessage);
+
+        return msg;
     }
 }

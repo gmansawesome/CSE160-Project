@@ -6,7 +6,8 @@
 
 enum{
     AM_FLOODING=10,
-    AM_NEIGHBOR=20
+    AM_NEIGHBOR=20,
+    AM_ROUTING=30
 };
 
 #endif

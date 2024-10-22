@@ -140,7 +140,7 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(10);
-    s.loadTopo("long_line.topo");
+    s.loadTopo("example.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
 
@@ -163,9 +163,9 @@ def main():
         s.neighborDMP(i);
         s.runTime(10);
 
-    s.runTime(10);
-    s.moteOff(8);
-    s.runTime(100);
+    # s.runTime(10);
+    # s.moteOff(8);
+    # s.runTime(100);
 
     # s.runTime(10);
     # for i in range (1, 20):
@@ -183,17 +183,17 @@ def main():
 
 
     # ROUTING
-    s.runTime(10);
-    s.linkstateDMP(4);
-    s.runTime(10);
+    # s.runTime(10);
+    # s.linkstateDMP(4);
+    # s.runTime(10);
 
-    s.runTime(10);
-    s.moteOn(8);
-    s.runTime(100);
+    # s.runTime(10);
+    # s.moteOn(8);
+    # s.runTime(100);
 
-    s.runTime(10);
-    s.linkstateDMP(4);
-    s.runTime(10);
+    # s.runTime(10);
+    # s.linkstateDMP(4);
+    # s.runTime(10);
 
     # s.runTime(10);
     # for i in range (1, 20):
@@ -212,11 +212,28 @@ def main():
 
 
     # PING
-    s.runTime(20);
-    s.ping(1, 2, "Hello, World");
     s.runTime(10);
+    s.ping(1, 9, "Hello, World");
+    s.runTime(10);
+
+    s.runTime(10);
+    s.moteOff(4);
+    s.runTime(100);
+
+    s.runTime(10);
+    s.ping(1, 9, "Hello, World");
+    s.runTime(10);
+
+    s.runTime(10);
+    s.moteOn(4);
+    s.runTime(100);
+
+    s.runTime(10);
+    s.ping(1, 9, "Hello, World");
+    s.runTime(10);
+
     # s.ping(1, 3, "Hi!");
-    # s.runTime(20);
+    # s.runTime(10);
 
 if __name__ == '__main__':
     main()
