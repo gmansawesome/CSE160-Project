@@ -16,9 +16,99 @@ implementation {
     uint8_t* activeNeighborPointer;
     uint8_t clearCount = 0;
 
-    static uint8_t routingTable[MAX_NODES];
+    uint8_t routingTableDist[MAX_NODES];
+    uint8_t routingTableNextHop[MAX_NODES];
+    bool visited[MAX_NODES];
 
+    // flattened adjacency matrix for Link State info
     static uint8_t allNeighbors[MAX_NODES*MAX_NODES];
+
+    void initializeRoutingTable() {
+        uint8_t i;
+
+        // dbg(ROUTING_CHANNEL, "Initializing Routing Table...\n");
+        for (i = 0; i < MAX_NODES; i++) {
+            routingTableDist[i] = 255;
+            routingTableNextHop[i] = 0;
+            visited[i] = FALSE;
+        }
+
+        routingTableDist[TOS_NODE_ID-1] = 0;
+        routingTableNextHop[TOS_NODE_ID-1] = TOS_NODE_ID;
+    }
+
+    uint8_t findMinDistanceNode() {
+        uint8_t i;
+        uint8_t min = 255;
+        uint8_t minIndex = MAX_NODES;
+
+        for (i = 0; i < MAX_NODES; i++) {
+            if (!visited[i] && routingTableDist[i] < min) {
+                min = routingTableDist[i];
+                minIndex = i;
+            }
+        }
+
+        if (minIndex != MAX_NODES) {
+            // dbg(ROUTING_CHANNEL, "Min distance node found: %d\n", minIndex+1);
+        }
+
+        return minIndex;
+    }
+
+    // build routing table using Dijkstra's algorithm
+    void buildRoutingTable() {
+        uint8_t i;
+        uint8_t u;
+        uint8_t neighborIndex;
+        uint8_t neighbor;
+
+        initializeRoutingTable();
+
+        // Process each node
+        for (i = 0; i < MAX_NODES-1; i++) {
+            u = findMinDistanceNode();
+
+            if (u == MAX_NODES) {
+                break;
+            }
+
+            visited[u] = TRUE;
+
+            for (neighborIndex = 0; neighborIndex < MAX_NODES; neighborIndex++) {
+                neighbor = allNeighbors[u * MAX_NODES + neighborIndex];
+
+                if (neighbor == 0) {
+                    break;
+                }
+
+                if (!visited[neighbor-1]) {
+                    if (routingTableDist[u] + 1 < routingTableDist[neighbor-1]) {
+                        // dbg(ROUTING_CHANNEL, "On Node [%d]. Adding Neighbor [%d], with value %d\n", u+1, neighbor, routingTableDist[u] + 1);
+                        routingTableDist[neighbor-1] = routingTableDist[u] + 1;
+                        if (u+1 == TOS_NODE_ID) {
+                            routingTableNextHop[neighbor-1] = neighbor;
+                        }
+                        else {
+                            routingTableNextHop[neighbor-1] = routingTableNextHop[u];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void printRoutingTable() {
+        uint8_t i;
+
+        dbg(ROUTING_CHANNEL, "Routing Table for: %d\n", TOS_NODE_ID);
+        for (i = 0; i < MAX_NODES; i++) {
+            // if (routingTableDist[i] == 255) {
+            //     break;
+            // }
+            dbg(ROUTING_CHANNEL, "[%d] -> %d -> [%d]\n", i+1, routingTableDist[i], routingTableNextHop[i]);
+        }
+    }
 
     // clear all array neighbors entries for a specific node
     void clearNeighbors(uint8_t node) {
@@ -45,7 +135,7 @@ implementation {
         // update self neighbor entries
         for (i = 0; i < MAX_NODES; i++) {
             if (activeNeighborPointer[i] == 0) {
-                // if (TOS_NODE_ID == 9 && i < 20) {
+                // if (TOS_NODE_ID == 1) {
                 //     activeNeighborPointer[i] = (i % 10) + 1; // remove later
                 // }
                 // else {
@@ -65,7 +155,7 @@ implementation {
 
         // send out LSP, fragmented if necessary
         while (count <= total) {
-            msg.dest = offset; // change later
+            msg.dest = 0; // change later
             msg.src = TOS_NODE_ID;
             msg.seq = 0;
             msg.TTL = MAX_TTL;
@@ -151,7 +241,7 @@ implementation {
                 break;
             }
 
-            // if (TOS_NODE_ID == 4 && src == 8) {
+            // if (TOS_NODE_ID == 4 && src == 1) {
             //     dbg(ROUTING_CHANNEL, "Source: %d, Offset: %d, Adding %d at position %d\n", src, offset, receivedPayload[i], (src-1)*MAX_NODES + offset + i - 1);
             // }
             
@@ -180,6 +270,7 @@ implementation {
         // periodically flood LSP, and clear LSP table
         // dbg(ROUTING_CHANNEL, "FIRED\n");
         call Routing.floodLSP();
+        // buildRoutingTable();
         clearCount++;
 
         if (clearCount == 20) {
@@ -191,10 +282,15 @@ implementation {
         }
     }
 
+    // output all neighbors using LSP Table
     command void Routing.outputAllNeighbors() {
         uint8_t i;
         uint8_t j;
 
+        buildRoutingTable();
+        printRoutingTable();
+
+        dbg(ROUTING_CHANNEL, "Link State info for: %d\n", TOS_NODE_ID);
         for (i = 1; i <= MAX_NODES; i++) {
             for (j = 0; j < MAX_NODES; j++) {
                 if (allNeighbors[(i-1)*MAX_NODES + j] == 0) {
@@ -213,4 +309,14 @@ implementation {
         }
     }
 
+    // return next hop from Routing Table for packet forwarding
+    command uint8_t Routing.forwarding(uint8_t dest) {
+        buildRoutingTable();
+
+        if (dest > 0 && dest <= MAX_NODES) {
+            return routingTableNextHop[dest-1];
+        }
+
+        return dest;
+    }
 }

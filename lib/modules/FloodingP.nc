@@ -64,7 +64,9 @@ implementation {
         // Update flooding cache for flood source
         if (msg.src == TOS_NODE_ID) {
             tempFlood.lastSeq = msg.seq;
-            tempFlood.lastDest = msg.dest;
+            if (msg.protocol == PROTOCOL_LINKSTATE) {
+                tempFlood.lastDest = msg.payload[0];
+            }
             call List.replace(msg.src, tempFlood);
         }
 
@@ -104,12 +106,14 @@ implementation {
         
         // Check if new flood using Dest
         dbg(FLOODING_CHANNEL, "Latest Dest: %d, New Dest: %d\n", tempFlood.lastDest, receivedMessage->dest);  
-        if (receivedMessage->dest > tempFlood.lastDest) {
+        if (receivedMessage->payload[0] > tempFlood.lastDest && receivedMessage->protocol == PROTOCOL_LINKSTATE) {
             dbg(FLOODING_CHANNEL, "NEW FLOOD\n");  
             tempFlood.lastSeq = INT_MAX;
         }
 
-        tempFlood.lastDest = receivedMessage->dest;
+        if (receivedMessage->protocol == PROTOCOL_LINKSTATE) {
+            tempFlood.lastDest = receivedMessage->payload[0];
+        }
 
         // Check for duplicate sequence numbers
         dbg(FLOODING_CHANNEL, "Latest Sequence: %d, New Sequence: %d\n", tempFlood.lastSeq, receivedMessage->seq);  
@@ -144,7 +148,7 @@ implementation {
         // Check if I am the destination!!!
         // Hello... is it me you're looking for?
         if (receivedMessage->dest == TOS_NODE_ID) {
-            dbg(FLOODING_CHANNEL, "I received a message from %d. The message states: %s\n",
+            dbg(GENERAL_CHANNEL, "I received a message from %d. The message states: %s\n",
                 receivedMessage->src, receivedMessage->payload);
             
             return msg;

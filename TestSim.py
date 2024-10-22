@@ -140,7 +140,7 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(10);
-    s.loadTopo("example.topo");
+    s.loadTopo("long_line.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
 
@@ -164,7 +164,7 @@ def main():
         s.runTime(10);
 
     s.runTime(10);
-    s.moteOff(1);
+    s.moteOff(8);
     s.runTime(100);
 
     # s.runTime(10);
@@ -184,15 +184,15 @@ def main():
 
     # ROUTING
     s.runTime(10);
-    s.linkstateDMP(3);
+    s.linkstateDMP(4);
     s.runTime(10);
 
     s.runTime(10);
-    s.moteOn(1);
+    s.moteOn(8);
     s.runTime(100);
 
     s.runTime(10);
-    s.linkstateDMP(3);
+    s.linkstateDMP(4);
     s.runTime(10);
 
     # s.runTime(10);
@@ -212,9 +212,9 @@ def main():
 
 
     # PING
-    # s.runTime(20);
-    # s.ping(1, 2, "Hello, World");
-    # s.runTime(10);
+    s.runTime(20);
+    s.ping(1, 2, "Hello, World");
+    s.runTime(10);
     # s.ping(1, 3, "Hi!");
     # s.runTime(20);
 

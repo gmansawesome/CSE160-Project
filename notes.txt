@@ -15,4 +15,4 @@ Run docker image and mount local folder:
     docker run -v C:\Users\micha\Documents\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
 
 TODO:
-1. routing!
+2. Forwarding
