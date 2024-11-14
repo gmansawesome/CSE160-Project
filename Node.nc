@@ -26,6 +26,7 @@ module Node{
    uses interface Flooding;
    uses interface Neighbor;
    uses interface Routing;
+   uses interface Transport;
 }
 
 implementation{
@@ -90,9 +91,21 @@ implementation{
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){}
+   event void CommandHandler.setTestServer(uint8_t port){
+      dbg(GENERAL_CHANNEL, "SERVER START EVENT \n");
+      // dbg(GENERAL_CHANNEL, "PORT: %d\n", port);
+      call Transport.setTestServer(port);
+   }
 
-   event void CommandHandler.setTestClient(){}
+   event void CommandHandler.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint8_t transfer){
+      dbg(GENERAL_CHANNEL, "CLIENT START EVENT \n");
+      call Transport.setTestClient(srcPort, dest, destPort, transfer);
+   }
+
+   event void CommandHandler.closeTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort){
+      dbg(GENERAL_CHANNEL, "CLIENT CLOSE EVENT \n");
+      call Transport.closeTestClient(srcPort, dest, destPort);
+   }
 
    event void CommandHandler.setAppServer(){}
 

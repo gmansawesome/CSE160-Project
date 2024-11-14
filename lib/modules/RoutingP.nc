@@ -323,6 +323,12 @@ implementation {
         call SimpleSend.send(msg, routingTableNextHop[msg.dest-1]);
     }
 
+    command uint8_t Routing.nextHop(uint8_t destination) {
+        buildRoutingTable();
+        return routingTableNextHop[destination-1];
+    }
+
+
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         pack* receivedMessage = (pack*)payload;
 

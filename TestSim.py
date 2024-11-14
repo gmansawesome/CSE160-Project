@@ -14,6 +14,9 @@ class TestSim:
     CMD_NEIGHBOR_DUMP = 1
     CMD_LINKSTATE_DUMP = 2
     CMD_ROUTE_DUMP = 3
+    CMD_TEST_CLIENT=4
+    CMD_TEST_SERVER=5
+    CMD_KILL=6
     CMD_FLOOD = 7
 
     # CHANNELS - see includes/channels.h
@@ -132,6 +135,15 @@ class TestSim:
 
     def linkstateDMP(self, destination):
         self.sendCMD(self.CMD_LINKSTATE_DUMP, destination, "linkstate command");
+    
+    def cmdTestServer(self, address, port):
+        self.sendCMD(self.CMD_TEST_SERVER, address, "{0}".format(chr(port)));
+    
+    def cmdTestClient(self, src, srcPort, dest, destPort, transfer):
+        self.sendCMD(self.CMD_TEST_CLIENT, src, "{0}{1}{2}{3}".format(chr(srcPort), chr(dest), chr(destPort), chr(transfer)))
+
+    def cmdClientClose(self, src, srcPort, dest, destPort):
+        self.sendCMD(self.CMD_KILL, src, "{0}{1}{2}".format(chr(srcPort), chr(dest), chr(destPort)));
 
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
@@ -148,49 +160,32 @@ def main():
     s.addChannel(s.GENERAL_CHANNEL);
     # s.addChannel(s.FLOODING_CHANNEL);
     # s.addChannel(s.NEIGHBOR_CHANNEL);
-    s.addChannel(s.ROUTING_CHANNEL);
+    # s.addChannel(s.ROUTING_CHANNEL);
+    s.addChannel(s.TRANSPORT_CHANNEL);
+
 
     # NEIGHBOR
-    # s.runTime(10);
-    # s.neighborDMP(4);
-    # s.runTime(10);
-    
-    # s.runTime(10);
-    # s.moteOff(8);
-
     s.runTime(10);
     for i in range (1, 20):
         s.neighborDMP(i);
         s.runTime(10);
 
-    # s.runTime(10);
-    # s.moteOff(8);
-    # s.runTime(100);
 
-    # s.runTime(10);
-    # for i in range (1, 20):
-    #     s.neighborDMP(i);
-    #     s.runTime(10);
+    # TRANSPORT
+    # address, port
+    s.cmdTestServer(4, 80);
+    s.runTime(10);
+    
+    # src, srcPort, dest, destPort, transfer(bytes to send)
+    s.cmdTestClient(9, 40, 4, 80, 10);
+    s.runTime(10);
 
-    # s.runTime(10);
-    # s.moteOn(8);
-    # s.runTime(10);
-
-    # s.runTime(10);
-    # for i in range (1, 20):
-    #     s.neighborDMP(i);
-    #     s.runTime(10);
+    # src, srcPort, dest, destPort
+    s.cmdClientClose(9, 40, 4, 80);
+    s.runTime(10);
 
 
     # ROUTING
-    # s.runTime(10);
-    # s.linkstateDMP(4);
-    # s.runTime(10);
-
-    # s.runTime(10);
-    # s.moteOn(8);
-    # s.runTime(100);
-
     # s.runTime(10);
     # s.linkstateDMP(4);
     # s.runTime(10);
@@ -212,28 +207,10 @@ def main():
 
 
     # PING
-    s.runTime(10);
-    s.ping(1, 9, "Hello, World");
-    s.runTime(10);
-
-    s.runTime(10);
-    s.moteOff(4);
-    s.runTime(100);
-
-    s.runTime(10);
-    s.ping(1, 9, "Hello, World");
-    s.runTime(10);
-
-    s.runTime(10);
-    s.moteOn(4);
-    s.runTime(100);
-
-    s.runTime(10);
-    s.ping(1, 9, "Hello, World");
-    s.runTime(10);
-
-    # s.ping(1, 3, "Hi!");
     # s.runTime(10);
+    # s.ping(1, 9, "Hello, World");
+    # s.runTime(10);
+
 
 if __name__ == '__main__':
     main()
