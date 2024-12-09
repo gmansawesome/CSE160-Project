@@ -97,7 +97,7 @@ implementation{
       call Transport.setTestServer(port);
    }
 
-   event void CommandHandler.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint8_t transfer){
+   event void CommandHandler.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint16_t transfer){
       dbg(GENERAL_CHANNEL, "CLIENT START EVENT \n");
       call Transport.setTestClient(srcPort, dest, destPort, transfer);
    }

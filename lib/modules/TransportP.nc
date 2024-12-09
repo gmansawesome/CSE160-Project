@@ -316,7 +316,7 @@ implementation {
         }
     }
 
-    command void Transport.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint8_t transfer) {
+    command void Transport.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint16_t transfer) {
         socket_t fd;
         socket_addr_t srcAddr;
         socket_addr_t destAddr;

@@ -8,7 +8,7 @@ enum{
     ROOT_SOCKET_ADDR = 255,
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
-    MAX_RETRIES = 5,
+    MAX_RETRIES = 10,
 };
 
 enum socket_state{

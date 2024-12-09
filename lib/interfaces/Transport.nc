@@ -17,7 +17,7 @@
 
 interface Transport{
    command void setTestServer(uint8_t port);
-   command void setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint8_t transfer);
+   command void setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint16_t transfer);
    command void closeTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort);
 
    /**

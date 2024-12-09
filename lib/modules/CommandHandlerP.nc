@@ -81,7 +81,7 @@ implementation{
             case CMD_TEST_CLIENT:
                 dbg(COMMAND_CHANNEL, "Command Type: Client\n");
                 // dbg(GENERAL_CHANNEL, "Buff 1: %d, Buff 2: %d, Buff 3: %d, Buff 4: %d\n", buff[0], buff[1], buff[2], buff[3]);
-                signal CommandHandler.setTestClient(buff[0], buff[1], buff[2], buff[3]);
+                signal CommandHandler.setTestClient(buff[0], buff[1], buff[2], (buff[3] << 8) | buff[4]);
                 break;
 
             case CMD_KILL:

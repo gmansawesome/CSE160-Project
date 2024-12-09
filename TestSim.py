@@ -6,6 +6,7 @@
 import sys
 from TOSSIM import *
 from CommandMsg import *
+import struct
 
 # region  
 strl = "-98"
@@ -145,7 +146,8 @@ class TestSim:
         self.sendCMD(self.CMD_TEST_SERVER, address, "{0}".format(chr(port)));
     
     def cmdTestClient(self, src, srcPort, dest, destPort, transfer):
-        self.sendCMD(self.CMD_TEST_CLIENT, src, "{0}{1}{2}{3}".format(chr(srcPort), chr(dest), chr(destPort), chr(transfer)))
+        transfer_bytes = struct.pack(">H", transfer);
+        self.sendCMD(self.CMD_TEST_CLIENT, src, "{0}{1}{2}".format(chr(srcPort), chr(dest), chr(destPort)) + transfer_bytes.decode("latin-1"))
 
     def cmdClientClose(self, src, srcPort, dest, destPort):
         self.sendCMD(self.CMD_KILL, src, "{0}{1}{2}".format(chr(srcPort), chr(dest), chr(destPort)));
@@ -201,10 +203,10 @@ def main():
     s.cmdTestClient(9, 10, 4, 90, 100);
     s.runTime(10);
 
-    s.cmdTestClient(1, 20, 8, 30, 200);
+    s.cmdTestClient(1, 20, 8, 30, 1000);
     s.runTime(10);
 
-    s.runTime(100);
+    s.runTime(1000);
 
     # src, srcPort, dest, destPort
     # s.cmdClientClose(9, 40, 4, 80);
