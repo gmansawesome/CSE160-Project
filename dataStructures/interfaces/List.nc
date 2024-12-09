@@ -24,4 +24,5 @@ interface List<t>{
 	command uint16_t size();
 	command t get(uint16_t position);
 	command void replace(uint16_t position, t input);
+	command void remove(uint16_t position);
 }

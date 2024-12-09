@@ -15,3 +15,7 @@ Run docker image and mount local folder:
     docker run -v C:\Users\micha\Documents\CSE160-Project:/home/CSE160 -ti ucmercedandeslab/tinyos_debian
 
 TODO:
+- signal Timer for Connect and Accept - timer for Client and Server is needed, for Ack and in case of retransmission.
+Signal is needed to run concurrently.
+- Connect timer needed for sending the data.
+- Nevermind, signals are for the APP layer

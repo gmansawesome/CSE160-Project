@@ -7,6 +7,9 @@ import sys
 from TOSSIM import *
 from CommandMsg import *
 
+# region  
+strl = "-98"
+# endregion
 class TestSim:
     moteids=[]
     # COMMAND TYPES
@@ -32,6 +35,8 @@ class TestSim:
 
     # Project 3
     TRANSPORT_CHANNEL="transport";
+    
+    APPLICATION_CHANNEL="application";
 
     # Personal Debuggin Channels for some of the additional models implemented.
     HASHMAP_CHANNEL="hashmap";
@@ -47,7 +52,7 @@ class TestSim:
         self.msg = CommandMsg()
         self.pkt = self.t.newPacket()
         self.pkt.setType(self.msg.get_amType())
-
+    
     # Load a topo file and use it.
     def loadTopo(self, topoFile):
         print 'Creating Topo!'
@@ -78,7 +83,7 @@ class TestSim:
         for line in noise:
             str1 = line.strip()
             if str1:
-                val = int(str1)
+                val = int(strl)
             for i in self.moteids:
                 self.t.getNode(i).addNoiseTraceReading(val)
 
@@ -161,7 +166,8 @@ def main():
     # s.addChannel(s.FLOODING_CHANNEL);
     # s.addChannel(s.NEIGHBOR_CHANNEL);
     # s.addChannel(s.ROUTING_CHANNEL);
-    s.addChannel(s.TRANSPORT_CHANNEL);
+    # s.addChannel(s.TRANSPORT_CHANNEL);
+    s.addChannel(s.APPLICATION_CHANNEL);
 
 
     # NEIGHBOR
@@ -173,16 +179,36 @@ def main():
 
     # TRANSPORT
     # address, port
-    s.cmdTestServer(4, 80);
+    s.cmdTestServer(4, 30);
+    s.runTime(10);
+
+    s.cmdTestServer(4, 60);
+    s.runTime(10);
+
+    s.cmdTestServer(4, 90);
+    s.runTime(10);
+    
+    s.cmdTestServer(8, 30);
     s.runTime(10);
     
     # src, srcPort, dest, destPort, transfer(bytes to send)
-    s.cmdTestClient(9, 40, 4, 80, 10);
+    s.cmdTestClient(1, 10, 4, 30, 100);
     s.runTime(10);
 
-    # src, srcPort, dest, destPort
-    s.cmdClientClose(9, 40, 4, 80);
+    s.cmdTestClient(3, 10, 4, 60, 100);
     s.runTime(10);
+
+    s.cmdTestClient(9, 10, 4, 90, 100);
+    s.runTime(10);
+
+    s.cmdTestClient(1, 20, 8, 30, 200);
+    s.runTime(10);
+
+    s.runTime(100);
+
+    # src, srcPort, dest, destPort
+    # s.cmdClientClose(9, 40, 4, 80);
+    # s.runTime(10);
 
 
     # ROUTING

@@ -76,16 +76,6 @@ interface Transport{
    // command uint16_t write(socket_t fd, uint8_t *buff, uint16_t bufflen);
 
    /**
-    * This will pass the packet so you can handle it internally. 
-    * @param
-    *    pack *package: the TCP packet that you are handling.
-    * @Side Client/Server 
-    * @return uint16_t - return SUCCESS if you are able to handle this
-    *    packet or FAIL if there are errors.
-    */
-   // command error_t receive(pack* package);
-
-   /**
     * Read from the socket and write this data to the buffer. This data
     * is obtained from your TCP implimentation.
     * @param

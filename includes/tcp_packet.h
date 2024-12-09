@@ -22,9 +22,9 @@ typedef nx_struct tcp_pack{
 	nx_uint8_t destPort;
 	nx_uint8_t seq;
 	nx_uint8_t ACK;
-	nx_uint8_t lastACK;
 	nx_uint8_t flag;
 	nx_uint8_t window;
+	nx_uint8_t length;
 	nx_uint8_t payload[TCP_PACKET_MAX_PAYLOAD_SIZE];
 }tcp_pack;
 

@@ -20,8 +20,17 @@ implementation{
     components ActiveMessageC;
     TransportP.Packet -> ActiveMessageC;
 
-    components new TimerMilliC();
-    TransportP.Timer -> TimerMilliC;
+    components new TimerMilliC() as serverTimer;
+    TransportP.serverTimer -> serverTimer;
+
+    components new TimerMilliC() as clientTimer;
+    TransportP.clientTimer -> clientTimer;
+
+    components new TimerMilliC() as connectDone;
+    TransportP.connectDone -> connectDone;
+
+    components new TimerMilliC() as closeTimer;
+    TransportP.closeTimer -> closeTimer;
 
     components MainC;
     TransportP.Boot -> MainC.Boot;
@@ -31,4 +40,7 @@ implementation{
 
     components new ListC(socket_store_t, MAX_NUM_OF_SOCKETS);
     TransportP.List -> ListC;
+
+    components new ListC(retransmit_pack_t, 50) as packQueue;
+	TransportP.packQueue -> packQueue;
 }

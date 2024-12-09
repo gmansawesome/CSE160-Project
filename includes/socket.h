@@ -1,11 +1,14 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
+#include "packet.h"
+
 enum{
     MAX_NUM_OF_SOCKETS = 10,
     ROOT_SOCKET_ADDR = 255,
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
+    MAX_RETRIES = 5,
 };
 
 enum socket_state{
@@ -14,6 +17,9 @@ enum socket_state{
     ESTABLISHED,
     SYN_SENT,
     SYN_RCVD,
+    FIN_WAIT_1,
+    FIN_WAIT_2,
+    CLOSE_WAIT,
 };
 
 
@@ -52,5 +58,11 @@ typedef struct socket_store_t{
     uint16_t RTT;
     uint8_t effectiveWindow;
 }socket_store_t;
+
+typedef struct {
+    socket_t socket;
+    pack retransmitPacket;
+    uint8_t retries;
+} retransmit_pack_t;
 
 #endif
