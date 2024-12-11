@@ -8,9 +8,6 @@ from TOSSIM import *
 from CommandMsg import *
 import struct
 
-# region  
-strl = "-98"
-# endregion
 class TestSim:
     moteids=[]
     # COMMAND TYPES
@@ -21,7 +18,11 @@ class TestSim:
     CMD_TEST_CLIENT=4
     CMD_TEST_SERVER=5
     CMD_KILL=6
-    CMD_FLOOD = 7
+    CMD_FLOOD=7
+    CMD_HELLO=10
+    CMD_BROADCAST_MESSAGE=11
+    CMD_UNICAST_MESSAGE=12
+    CMD_PRINT_USERS=14
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -84,7 +85,7 @@ class TestSim:
         for line in noise:
             str1 = line.strip()
             if str1:
-                val = int(strl)
+                val = int(str1)
             for i in self.moteids:
                 self.t.getNode(i).addNoiseTraceReading(val)
 
@@ -152,6 +153,20 @@ class TestSim:
     def cmdClientClose(self, src, srcPort, dest, destPort):
         self.sendCMD(self.CMD_KILL, src, "{0}{1}{2}".format(chr(srcPort), chr(dest), chr(destPort)));
 
+    def hello(self, source, port, username):
+        payload = chr(port).encode('utf-8') + username.encode('utf-8')
+        self.sendCMD(self.CMD_HELLO, source, payload);
+
+    def message(self, source, msg):
+        self.sendCMD(self.CMD_BROADCAST_MESSAGE, source, msg)
+    
+    def whisper(self, source, username, msg):
+        payload = username + '\0' + msg
+        self.sendCMD(self.CMD_UNICAST_MESSAGE, source, payload)
+
+    def printUsers(self, destination):
+        self.sendCMD(self.CMD_PRINT_USERS, destination, "print users command");
+
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
@@ -181,32 +196,52 @@ def main():
 
     # TRANSPORT
     # address, port
-    s.cmdTestServer(4, 30);
-    s.runTime(10);
-
-    s.cmdTestServer(4, 60);
-    s.runTime(10);
-
-    s.cmdTestServer(4, 90);
+    s.cmdTestServer(1, 41);
     s.runTime(10);
     
-    s.cmdTestServer(8, 30);
+    # s.cmdTestServer(8, 30);
+    # s.runTime(10);
+
+
+    s.hello(3, 11, "michael");
     s.runTime(10);
-    
+
+    s.hello(6, 11, "joebiden");
+    s.runTime(10);
+
+    s.whisper(3, "joebiden", "#Biden2024");
+    s.runTime(10);
+
+    s.hello(9, 11, "zhongli");
+    s.runTime(10);
+
+    s.whisper(9, "michael", "Solidify!");
+    s.runTime(10);
+
+    s.message(6, "I'm sleepy");
+    s.runTime(10);
+
+    s.printUsers(3);
+    s.runTime(10);
+
+
     # src, srcPort, dest, destPort, transfer(bytes to send)
-    s.cmdTestClient(1, 10, 4, 30, 100);
-    s.runTime(10);
+    # s.cmdTestClient(3, 11, 1, 41, 50);
+    # s.runTime(10);
 
-    s.cmdTestClient(3, 10, 4, 60, 100);
-    s.runTime(10);
+    # s.cmdTestClient(6, 11, 1, 41, 50);
+    # s.runTime(10);
 
-    s.cmdTestClient(9, 10, 4, 90, 100);
-    s.runTime(10);
+    # s.cmdTestClient(8, 11, 1, 41, 50);
+    # s.runTime(10);
 
-    s.cmdTestClient(1, 20, 8, 30, 1000);
-    s.runTime(10);
+    # s.cmdTestClient(9, 11, 1, 41, 50);
+    # s.runTime(10);
 
-    s.runTime(1000);
+    # s.cmdTestClient(1, 20, 8, 30, 1000);
+    # s.runTime(10);
+
+    s.runTime(200);
 
     # src, srcPort, dest, destPort
     # s.cmdClientClose(9, 40, 4, 80);

@@ -27,6 +27,7 @@ module Node{
    uses interface Neighbor;
    uses interface Routing;
    uses interface Transport;
+   uses interface Application;
 }
 
 implementation{
@@ -110,6 +111,29 @@ implementation{
    event void CommandHandler.setAppServer(){}
 
    event void CommandHandler.setAppClient(){}
+
+   event void CommandHandler.sayHello(uint8_t port, uint8_t *username) {
+      dbg(GENERAL_CHANNEL, "HELLO EVENT \n");
+      call Application.hello(port, username);
+   }
+
+   event void CommandHandler.broadcastMessage(uint8_t* message) {
+      dbg(GENERAL_CHANNEL, "BROADCAST MESSAGE EVENT \n");
+      call Application.broadMessage(message);
+   }
+
+   event void CommandHandler.unicastMessage(uint8_t* username, uint8_t* message) {
+      dbg(GENERAL_CHANNEL, "UNICAST MESSAGE EVENT \n");
+      call Application.uniMessage(username, message);
+   }
+
+   event void CommandHandler.printUsers() {
+      dbg(GENERAL_CHANNEL, "PRINT USERS EVENT \n");
+      call Application.printUsers();
+   }
+
+   event void Transport.connected() {}
+   event void Transport.accepted() {}
 
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;

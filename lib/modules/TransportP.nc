@@ -20,6 +20,7 @@ module TransportP{
     uses interface Routing;
     uses interface List<socket_store_t>;
     uses interface List<retransmit_pack_t> as packQueue;
+    uses interface Application;
 }
 
 implementation {
@@ -81,7 +82,8 @@ implementation {
         }
         emptySocket.lastWritten = 0;
         emptySocket.lastSent = 0;
-
+        emptySocket.lastAck = 0;
+        
         for (j = 0; j < SOCKET_BUFFER_SIZE; j++) {
             emptySocket.rcvdBuff[j] = 0;
         }
@@ -137,6 +139,104 @@ implementation {
         return SUCCESS;
     }
 
+    command void Transport.write(uint8_t fd, uint8_t msgLength, uint16_t* msg) {
+        socket_store_t socket;
+        uint8_t i;
+        uint8_t j;
+        uint8_t offset = 0;
+
+        for (i = 1; i <= MAX_NUM_OF_SOCKETS; i++) {
+            socket = call List.get(i);
+            if ((socket.state == ESTABLISHED && i == fd) || (socket.state == ESTABLISHED && fd == 0)) {
+                dbg(TRANSPORT_CHANNEL, "Preparing to send %d bytes on socket %d\n", msgLength, i);
+
+                dbg(TRANSPORT_CHANNEL, "Space: %d\n", SOCKET_BUFFER_SIZE - (socket.lastWritten - socket.lastSent + SOCKET_BUFFER_SIZE) % SOCKET_BUFFER_SIZE);
+                if (msgLength > SOCKET_BUFFER_SIZE - (socket.lastWritten - socket.lastSent + SOCKET_BUFFER_SIZE) % SOCKET_BUFFER_SIZE) {
+                    dbg(TRANSPORT_CHANNEL, "Error: Not enough space in send buffer\n");
+                    return;
+                }
+
+                for (j = 0; j < msgLength; j++) {
+                    socket.sendBuff[socket.lastWritten] = ((uint8_t *)msg)[j];
+                    socket.lastWritten = (socket.lastWritten + 1) % SOCKET_BUFFER_SIZE;
+                }
+
+                transferData[i-1] += msgLength;
+
+                call List.replace(i, socket);
+
+                dbg(TRANSPORT_CHANNEL, "Wrote %d bytes for socket %d\n", msgLength, i);
+                dbg(APPLICATION_CHANNEL, "Wrote %d bytes for socket %d\n", msgLength, i);
+            }
+        }
+
+        dbg(TRANSPORT_CHANNEL, "No established socket found for writing\n");
+    }
+
+    command uint8_t* Transport.read() {
+        socket_store_t socket;
+        int i;
+        int j;
+        uint8_t bytesAvailable;
+        static uint8_t data[MAX_NUM_OF_SOCKETS*SOCKET_BUFFER_SIZE];
+        char buffer[MAX_NUM_OF_SOCKETS*SOCKET_BUFFER_SIZE+1];
+        int bufIndex = 0;
+
+        for (i = 0; i < MAX_NUM_OF_SOCKETS*SOCKET_BUFFER_SIZE; i++) {
+            data[i] = 0;
+        }
+
+        // dbg(TRANSPORT_CHANNEL, "Reading\n");
+        for (i = 1; i <= MAX_NUM_OF_SOCKETS; i++) {
+            socket = call List.get(i);
+            if (socket.state == ESTABLISHED || socket.state == CLOSE_WAIT) {
+                // bytesAvailable = SOCKET_BUFFER_SIZE - socket.effectiveWindow;
+
+                if (socket.lastRcvd >= socket.lastRead) {
+                    bytesAvailable = socket.lastRcvd - socket.lastRead;
+                } else {
+                    bytesAvailable = SOCKET_BUFFER_SIZE - (socket.lastRead - socket.lastRcvd);
+                }
+
+                if (bytesAvailable == 0) {
+                    // dbg(TRANSPORT_CHANNEL, "No data available to read!\n");
+                    continue;
+                }
+
+                dbg(TRANSPORT_CHANNEL, "READING from socket <%d> [-----------------------]\n", i);
+
+                for (j = 0; j < bytesAvailable; j++) {
+                    data[(i-1)*SOCKET_BUFFER_SIZE+j] = socket.rcvdBuff[(socket.lastRead + j) % SOCKET_BUFFER_SIZE];
+                    // dbg(TRANSPORT_CHANNEL, "Char: %c\n", data[(i-1)*SOCKET_BUFFER_SIZE+j]);
+                }
+
+                dbg(TRANSPORT_CHANNEL, "lastRead %d -> %d\n", socket.lastRead, (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE);
+                socket.lastRead = (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE;
+                // socket.effectiveWindow += bytesAvailable;
+
+                totalRead[i-1] += bytesAvailable;
+                dbg(TRANSPORT_CHANNEL, "Node [%d] read %d bytes on SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
+                dbg(APPLICATION_CHANNEL, "Node [%d] read %d bytes on SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
+
+                // dbg(TRANSPORT_CHANNEL, "DATA: %s\n", data);
+                // dbg(APPLICATION_CHANNEL, "DATA: %s\n", data);
+
+                dbg(TRANSPORT_CHANNEL, "Entire DATA Buffer:\n");
+                for (j = 0; j < MAX_NUM_OF_SOCKETS * SOCKET_BUFFER_SIZE; j++) {
+                    if (data[j] != 0) {
+                        buffer[bufIndex++] = data[j];            
+                    }
+                }
+                buffer[bufIndex] = '\0';
+
+                dbg(TRANSPORT_CHANNEL, "%s\n", buffer);
+                call List.replace(i, socket);
+            }
+        }
+
+        return data;
+    }
+
     command error_t Transport.listen(socket_t fd) {
         socket_store_t socket;
 
@@ -186,6 +286,8 @@ implementation {
 
         call SimpleSend.send(msg, call Routing.nextHop(msg.dest));
         
+        enqueueRetransmit(fd, msg);
+
         return SUCCESS;
     }
 
@@ -233,16 +335,44 @@ implementation {
     event void closeTimer.fired() {
         socket_store_t socket;
         int i;
-        
+        int j;
+
         for (i = 1; i <= MAX_NUM_OF_SOCKETS; i++) {
             socket = call List.get(i);
             if (socket.state == CLOSE_WAIT) {
                 dbg(TRANSPORT_CHANNEL, "STATE: CLOSE_WAIT -> CLOSED\n");
-                socket.state = CLOSED;
-                call List.replace(i, socket);
-
                 dbg(TRANSPORT_CHANNEL, "Stream closed from [%d]:%d <-> [%d]:%d on <%d>\n", TOS_NODE_ID, socket.src, socket.dest.addr, socket.dest.port, i);
                 dbg(APPLICATION_CHANNEL, "Stream closed from [%d]:%d <-> [%d]:%d on <%d>\n", TOS_NODE_ID, socket.src, socket.dest.addr, socket.dest.port, i);
+
+                socket.flag = 0;
+                socket.state = CLOSED;
+                socket.src = 0;
+                socket.dest.port = 0;
+                socket.dest.addr = 0;
+
+                for (j = 0; j < SOCKET_BUFFER_SIZE; j++) {
+                    socket.sendBuff[j] = 0;
+                }
+                socket.lastWritten = 0;
+                socket.lastSent = 0;
+                socket.lastAck = 0;
+
+                for (j = 0; j < SOCKET_BUFFER_SIZE; j++) {
+                    socket.rcvdBuff[j] = 0;
+                }
+                socket.lastRead = 0;
+                socket.lastRcvd = 0;
+                socket.nextExpected = 0;
+
+                socket.RTT = 0;
+                socket.effectiveWindow = SOCKET_BUFFER_SIZE;
+
+                call List.replace(i, socket);
+
+                transferData[i-1] = 0;
+                totalRead[i-1] = 0;
+                skips[i-1] = 0;
+                skipFrequency[i-1] = 0;
             }
         }
     }
@@ -261,62 +391,66 @@ implementation {
 
         call Transport.listen(fd);
 
-        dbg(TRANSPORT_CHANNEL, "Server [%d] listening on Socket %d, Port %d\n", TOS_NODE_ID, fd, port);
+        dbg(TRANSPORT_CHANNEL, "Server [%d] listening on Socket <%d>, Port %d\n", TOS_NODE_ID, fd, port);
+        dbg(APPLICATION_CHANNEL, "Server [%d] listening on Socket <%d>, Port %d\n", TOS_NODE_ID, fd, port);
         // socket = call List.get(fd);
         // dbg(TRANSPORT_CHANNEL, "Socket.src = %d\n", socket.src);
         // dbg(TRANSPORT_CHANNEL, "Socket.state = %d\n", socket.state);
 
-        call serverTimer.startPeriodic(READ_TIME);        
+        // call serverTimer.startPeriodic(READ_TIME);        
     }
 
     event void serverTimer.fired() {
-        socket_store_t socket;
-        int i;
-        int j;
-        uint8_t bytesAvailable;
-        uint8_t data[SOCKET_BUFFER_SIZE];
+    //     socket_store_t socket;
+    //     int i;
+    //     int j;
+    //     uint8_t bytesAvailable;
+    //     uint8_t data[SOCKET_BUFFER_SIZE];
 
-        // dbg(TRANSPORT_CHANNEL, "Server timer\n");
-        for (i = 1; i <= MAX_NUM_OF_SOCKETS; i++) {
-            socket = call List.get(i);
-            if (socket.state == ESTABLISHED || socket.state == CLOSE_WAIT) {
-                // if (socket.lastRcvd == socket.lastRead) {
-                //     if (socket.effectiveWindow == 0) {
-                //         bytesAvailable = SOCKET_BUFFER_SIZE;
-                //     } else {
-                //         bytesAvailable = 0;
-                //     }
-                // } else {
-                //     bytesAvailable = (socket.lastRcvd - socket.lastRead + SOCKET_BUFFER_SIZE) % SOCKET_BUFFER_SIZE;
-                // }
-                // dbg(TRANSPORT_CHANNEL, "Effective Window: %d\n", socket.effectiveWindow);
-                bytesAvailable = SOCKET_BUFFER_SIZE - socket.effectiveWindow;
+    //     // dbg(TRANSPORT_CHANNEL, "Server timer\n");
+    //     for (i = 1; i <= MAX_NUM_OF_SOCKETS; i++) {
+    //         socket = call List.get(i);
+    //         if (socket.state == ESTABLISHED || socket.state == CLOSE_WAIT) {
+    //             // if (socket.lastRcvd == socket.lastRead) {
+    //             //     if (socket.effectiveWindow == 0) {
+    //             //         bytesAvailable = SOCKET_BUFFER_SIZE;
+    //             //     } else {
+    //             //         bytesAvailable = 0;
+    //             //     }
+    //             // } else {
+    //             //     bytesAvailable = (socket.lastRcvd - socket.lastRead + SOCKET_BUFFER_SIZE) % SOCKET_BUFFER_SIZE;
+    //             // }
+    //             // dbg(TRANSPORT_CHANNEL, "Effective Window: %d\n", socket.effectiveWindow);
+    //             bytesAvailable = SOCKET_BUFFER_SIZE - socket.effectiveWindow;
 
-                if (bytesAvailable == 0) {
-                    // dbg(TRANSPORT_CHANNEL, "No data available to read!\n");
-                    continue;
-                }
+    //             if (bytesAvailable == 0) {
+    //                 // dbg(TRANSPORT_CHANNEL, "No data available to read!\n");
+    //                 continue;
+    //             }
 
-                dbg(TRANSPORT_CHANNEL, "READING from socket %d -----------------------\n", i);
+    //             dbg(TRANSPORT_CHANNEL, "READING from socket <%d> [-----------------------]\n", i);
 
-                for (j = 0; j < bytesAvailable; j++) {
-                    data[j] = socket.rcvdBuff[(socket.lastRead + j) % SOCKET_BUFFER_SIZE];
-                }
+    //             for (j = 0; j < bytesAvailable; j++) {
+    //                 data[j] = socket.rcvdBuff[(socket.lastRead + j) % SOCKET_BUFFER_SIZE];
+    //             }
 
-                dbg(TRANSPORT_CHANNEL, "lastRead %d -> %d\n", socket.lastRead, (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE);
-                socket.lastRead = (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE;
-                socket.effectiveWindow += bytesAvailable;
+    //             dbg(TRANSPORT_CHANNEL, "lastRead %d -> %d\n", socket.lastRead, (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE);
+    //             socket.lastRead = (socket.lastRead + bytesAvailable) % SOCKET_BUFFER_SIZE;
+    //             socket.effectiveWindow += bytesAvailable;
 
-                totalRead[i-1] += bytesAvailable;
-                dbg(TRANSPORT_CHANNEL, "SERVER [%d] read %d bits from SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
-                dbg(APPLICATION_CHANNEL, "SERVER [%d] read %d bits from SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
+    //             totalRead[i-1] += bytesAvailable;
+    //             dbg(TRANSPORT_CHANNEL, "SERVER [%d] read %d bytes from SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
+    //             dbg(APPLICATION_CHANNEL, "SERVER [%d] read %d bytes from SOCKET <%d> (total: %d)\n", TOS_NODE_ID, bytesAvailable, i, totalRead[i-1]);
 
-                call List.replace(i, socket);
-            }
-        }
+    //             dbg(TRANSPORT_CHANNEL, "DATA: %s\n", data);
+    //             dbg(APPLICATION_CHANNEL, "DATA: %s\n", data);
+
+    //             call List.replace(i, socket);
+    //         }
+    //     }
     }
 
-    command void Transport.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint16_t transfer) {
+    command socket_t Transport.setTestClient(uint8_t srcPort, uint16_t dest, uint8_t destPort, uint16_t transfer) {
         socket_t fd;
         socket_addr_t srcAddr;
         socket_addr_t destAddr;
@@ -341,6 +475,9 @@ implementation {
                 dbg(TRANSPORT_CHANNEL, "Socket: %d, Data: %d\n", i, transferData[i-1]);
             }
         }
+
+        return fd;
+
         // call clientTimer.startPeriodic(RETRANSMIT_TIME);
     }
 
@@ -353,29 +490,27 @@ implementation {
         // dbg(TRANSPORT_CHANNEL, "Checking for retransmissions...\n");
 
         for (i = 1; i <= call packQueue.size(); i++) {
-            retransmitEntry = call packQueue.get(i);
+            retransmitEntry = call packQueue.popfront();
             socket = call List.get(retransmitEntry.socket);
             tcpMessage = (tcp_pack *)retransmitEntry.retransmitPacket.payload;
             
             // Special case for SYN_ACK + ACK
-            if (tcpMessage->flag == SYN_ACK_FLAG || tcpMessage->flag == ACK_FLAG || tcpMessage->flag == FIN_FLAG || tcpMessage->flag == FIN_ACK_FLAG) {
+            if (tcpMessage->flag == SYN_FLAG || tcpMessage->flag == SYN_ACK_FLAG || tcpMessage->flag == ACK_FLAG || tcpMessage->flag == FIN_FLAG || tcpMessage->flag == FIN_ACK_FLAG) {
                 // dbg(TRANSPORT_CHANNEL, "Retransmitting special packet on socket %d. Seq: %d, Flag: %d, Retries: %d\n",
                 //     retransmitEntry.socket, retransmitEntry.retransmitPacket.seq, tcpMessage->flag, retransmitEntry.retries);
 
                 call SimpleSend.send(retransmitEntry.retransmitPacket, call Routing.nextHop(retransmitEntry.retransmitPacket.dest));
-
-                call packQueue.remove(i);
 
                 continue;
             }
            
             // Check if retries exceeded
             if (retransmitEntry.retries >= MAX_RETRIES) {
-                dbg(TRANSPORT_CHANNEL, "Max retries exceeded for socket %d. Closing connection.\n", retransmitEntry.socket);
-                socket.state = CLOSED;
-                call List.replace(retransmitEntry.socket, socket);
-                call packQueue.remove(i);
-                i--;
+                dbg(TRANSPORT_CHANNEL, "Max retries exceeded for packet %d.\n", retransmitEntry.retransmitPacket.seq);
+                continue;
+            }
+
+            if (socket.state == CLOSED) {
                 continue;
             }
 
@@ -383,7 +518,7 @@ implementation {
             dbg(TRANSPORT_CHANNEL, "RETRANSMITTING packet on socket %d. Seq:%d. Retry count: %d\n", retransmitEntry.socket, retransmitEntry.retransmitPacket.seq, retransmitEntry.retries + 1);
             call SimpleSend.send(retransmitEntry.retransmitPacket, call Routing.nextHop(retransmitEntry.retransmitPacket.dest));
             retransmitEntry.retries++;
-            call packQueue.replace(i, retransmitEntry);
+            call packQueue.pushback(retransmitEntry);
         }
     }
 
@@ -465,10 +600,11 @@ implementation {
                 }
 
                 dbg(TRANSPORT_CHANNEL, "Effective window: %d\n", socket.effectiveWindow);
-                dbg(TRANSPORT_CHANNEL, "Bits to send: %d\n", bytesToSend);
+                dbg(TRANSPORT_CHANNEL, "Bytes to send: %d\n", bytesToSend);
                 dbg(TRANSPORT_CHANNEL, "Sequence: %d\n", TCPmsg.seq);
                 for (j = 0; j < bytesToSend; j++) {
-                    TCPmsg.payload[j] = j;
+                    TCPmsg.payload[j] = socket.sendBuff[(socket.lastSent + j) % SOCKET_BUFFER_SIZE];
+                    // dbg(TRANSPORT_CHANNEL, "Char: %c\n", TCPmsg.payload[j]);
                 }
                 TCPmsg.length = bytesToSend;
 
@@ -489,7 +625,8 @@ implementation {
                 enqueueRetransmit(i, msg);
             }
             else if (socket.state == ESTABLISHED && transferData[i-1] == 0) {
-                call Transport.close(i);
+                // dbg(TRANSPORT_CHANNEL, "Idle...!\n");
+                // call Transport.close(i);
             }
             else if (socket.state == FIN_WAIT_1 && socket.lastSent == socket.lastAck) {
                 dbg(TRANSPORT_CHANNEL, "STATE: FIN_WAIT_1 -> FIN_WAIT_2\n");
@@ -541,6 +678,8 @@ implementation {
                         socket.state = SYN_RCVD;
                         socket.dest.port = tcpMessage->srcPort;
                         socket.dest.addr = receivedMessage->src;
+                        call Transport.setTestServer(socket.src);
+                        socket.src += i;
                         call List.replace(i, socket);
                         dbg(TRANSPORT_CHANNEL, "STATE: LISTENING -> SYN_RCVD\n");
 
@@ -588,6 +727,9 @@ implementation {
                         call SimpleSend.send(*receivedMessage, call Routing.nextHop(receivedMessage->dest));
                         enqueueRetransmit(i, *receivedMessage);
 
+                        signal Transport.connected();
+                        signal Transport.accepted();
+
                         call connectDone.startPeriodic(CONNECT_DONE_TIME);
                         call clientTimer.startOneShot(RETRANSMIT_TIME);
                     }
@@ -599,12 +741,15 @@ implementation {
                         socket.state = ESTABLISHED;
                         call List.replace(i, socket);
                         dbg(TRANSPORT_CHANNEL, "STATE: SYN_RCVD -> ESTABLISHED\n");
+                        
+                        signal Transport.accepted();
+                        call connectDone.startPeriodic(CONNECT_DONE_TIME);
 
                         dbg(APPLICATION_CHANNEL, "Three-way handshake complete from [%d]:%d <-> [%d]:%d on <%d>\n", TOS_NODE_ID, socket.src, socket.dest.addr, socket.dest.port, i);
                         dbg(TRANSPORT_CHANNEL, "Three-way handshake complete from [%d]:%d <-> [%d]:%d on <%d>\n", TOS_NODE_ID, socket.src, socket.dest.addr, socket.dest.port, i);
                     }
                 }
-                else if (socket.state == ESTABLISHED || socket.state == CLOSE_WAIT) {
+                else if (socket.state == ESTABLISHED || socket.state == CLOSE_WAIT || socket.state == FIN_WAIT_1) {
                     // dbg(TRANSPORT_CHANNEL, "My current state is ESTABLISHED\n");
                     if (tcpMessage->flag == DATA_FLAG) {
                         // dbg(TRANSPORT_CHANNEL, "FLAG: DATA_FLAG\n");
@@ -637,9 +782,10 @@ implementation {
                         }
 
                         bytesReceived = tcpMessage->length;
-                        dbg(TRANSPORT_CHANNEL, "Bits received: %d\n", bytesReceived);
+                        dbg(TRANSPORT_CHANNEL, "Bytes received: %d\n", bytesReceived);
                         for (j = 0; j < bytesReceived; j++) {
                             socket.rcvdBuff[(socket.lastRcvd + j) % SOCKET_BUFFER_SIZE] = tcpMessage->payload[j];
+                            // dbg(TRANSPORT_CHANNEL, "Char: %c\n", socket.rcvdBuff[(socket.lastRcvd + j) % SOCKET_BUFFER_SIZE]);
                         }
 
                         dbg(TRANSPORT_CHANNEL, "lastRcvd %d -> %d\n", socket.lastRcvd, (socket.lastRcvd + bytesReceived) % SOCKET_BUFFER_SIZE);
@@ -668,7 +814,7 @@ implementation {
                             ackTCPMsg.window = SOCKET_BUFFER_SIZE - (SOCKET_BUFFER_SIZE - socket.lastRead + socket.lastRcvd);
                         }
 
-                        socket.effectiveWindow = ackTCPMsg.window;
+                        // socket.effectiveWindow = ackTCPMsg.window;
 
                         memcpy(ackMsg.payload, &ackTCPMsg, sizeof(ackTCPMsg));
                         call SimpleSend.send(ackMsg, call Routing.nextHop(ackMsg.dest));
@@ -690,7 +836,7 @@ implementation {
                         }
 
                         bytesReceived = tcpMessage->ACK - socket.lastAck;
-                        dbg(TRANSPORT_CHANNEL, "Bits acked: %d\n", bytesReceived);
+                        dbg(TRANSPORT_CHANNEL, "Bytes acked: %d\n", bytesReceived);
 
                         socket.lastAck = tcpMessage->ACK;
 

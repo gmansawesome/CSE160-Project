@@ -9,6 +9,7 @@ enum{
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
     MAX_RETRIES = 10,
+    MAX_STRING_LENGTH = 50,
 };
 
 enum socket_state{
@@ -64,5 +65,10 @@ typedef struct {
     pack retransmitPacket;
     uint8_t retries;
 } retransmit_pack_t;
+
+typedef struct {
+    socket_t fd;
+    char value[MAX_STRING_LENGTH];
+} string_entry_t;
 
 #endif

@@ -90,6 +90,26 @@ implementation{
                 signal CommandHandler.closeTestClient(buff[0], buff[1], buff[2]);
                 break;
 
+            case CMD_HELLO:
+                dbg(COMMAND_CHANNEL, "Command Type: Hello\n");
+                signal CommandHandler.sayHello(buff[0], &buff[1]);
+                break;
+
+            case CMD_BROADCAST_MESSAGE:
+                dbg(COMMAND_CHANNEL, "Command Type: Broadcast Message\n");
+                signal CommandHandler.broadcastMessage(&buff[0]);
+                break;
+
+            case CMD_UNICAST_MESSAGE:
+                dbg(COMMAND_CHANNEL, "Command Type: Unicast Message\n");
+                signal CommandHandler.unicastMessage((char*)&buff[0], strchr((char*)&buff[0], '\0') + 1);
+                break;
+
+            case CMD_PRINT_USERS:
+                dbg(COMMAND_CHANNEL, "Command Type: Print Users\n");
+                signal CommandHandler.printUsers();
+                break;
+
             default:
                 dbg(COMMAND_CHANNEL, "CMD_ERROR: \"%d\" does not match any known commands.\n", msg->id);
                 break;

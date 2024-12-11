@@ -43,4 +43,7 @@ implementation{
 
     components new ListC(retransmit_pack_t, 50) as packQueue;
 	TransportP.packQueue -> packQueue;
+
+    components ApplicationC;
+    TransportP.Application -> ApplicationC;
 }
